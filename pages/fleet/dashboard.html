@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Fleet Coordinator</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <link rel="stylesheet" href="/css/base/variables.css" />
+  <link rel="stylesheet" href="/css/base/reset.css" />
+  <link rel="stylesheet" href="/css/base/typography.css" />
+  <link rel="stylesheet" href="/css/base/layout.css" />
+  <link rel="stylesheet" href="/css/components/button.css" />
+  <link rel="stylesheet" href="/css/components/card.css" />
+  <link rel="stylesheet" href="/css/components/table.css" />
+  <link rel="stylesheet" href="/css/components/badge.css" />
+  <link rel="stylesheet" href="/css/components/modal.css" />
+  <link rel="stylesheet" href="/css/components/navbar.css" />
+  <link rel="stylesheet" href="/css/components/notification-bell.css" />
+  <link rel="stylesheet" href="/css/pages/fleet-dashboard.css" />
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+
+  <div class="page-wrapper">
+    <div class="container">
+
+      <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+        <a href="/pages/fleet/new-trip.html" class="btn btn-primary">+ New Trip</a>
+      </div>
+
+      <div id="page-error" class="alert alert-danger hidden" role="alert"></div>
+
+      <div id="loading" class="loading-overlay">
+        <span class="spinner"></span>
+        Loading dashboard…
+      </div>
+
+      <div id="dashboard-stats" class="dashboard-stats"></div>
+
+      <div class="recent-trips-section">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Recent Trips</span>
+            <a href="/pages/fleet/history.html" class="btn btn-sm btn-secondary">View All</a>
+          </div>
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Trip ID</th>
+                  <th>Date</th>
+                  <th>Driver</th>
+                  <th>Route</th>
+                  <th class="num">Total Cost</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="recent-trips-tbody">
+                <tr><td colspan="7" class="text-center text-muted">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/js/config/config.js"></script>
+  <script src="/js/constants/index.js"></script>
+  <script src="/js/utils/date-formatter.js"></script>
+  <script src="/js/utils/cost-calculator.js"></script>
+  <script src="/js/utils/validator.js"></script>
+  <script src="/js/services/api.service.js"></script>
+  <script src="/js/services/auth.service.js"></script>
+  <script src="/js/services/trips.service.js"></script>
+  <script src="/js/services/sites.service.js"></script>
+  <script src="/js/services/notify.service.js"></script>
+  <script src="/js/components/navbar.js"></script>
+  <script src="/js/components/notification-bell.js"></script>
+  <script src="/js/components/modal.js"></script>
+  <script src="/js/pages/fleet/dashboard.js"></script>
+</body>
+</html>

@@ -1,175 +1,86 @@
 /**
- * sites.gs — CRUD operations for the Sites tab.
- *
- * Expected Sites columns (row 1 = headers):
- *   A: siteId | B: tripId | C: siteNumber | D: coordinatorEmail
- *   E: jobCode | F: costShare | G: jcStatus
+ * sites.gs — Site-level operations
+ * ──────────────────────────────────
+ * Sites sheet columns (in order):
+ *   siteId | tripId | siteNumber | coordinatorEmail | jobCode | costShare | jcStatus
  */
-
-var SITES_SHEET = 'Sites';
 
 /**
- * Returns all sites belonging to a specific trip.
+ * Get all sites for a given trip.
  *
- * @param {string} tripId - The trip's unique identifier.
- * @returns {{ success: boolean, data?: object[], error?: string }}
+ * @param {{ tripId: string }} data
+ * @returns {{ success: boolean, data: Object[] }}
  */
-function getSitesByTrip(tripId) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SITES_SHEET);
-  if (!sheet) return { success: false, error: 'Sites sheet not found.' };
+function getSitesByTrip(data) {
+  var tripId = data.tripId;
+  if (!tripId) return { success: false, error: 'tripId is required.' };
 
-  var data = sheet.getDataRange().getValues();
-  var sites = [];
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    if (!row[0]) continue;
-    if (String(row[1]) === String(tripId)) {
-      sites.push(rowToSite(row));
-    }
-  }
-  return { success: true, data: sites };
+  var sites = sheetToObjects(getSheet(TABS.SITES));
+  var result = sites.filter(function (s) { return s.tripId === tripId; });
+  return { success: true, data: result };
 }
 
 /**
- * Returns all sites assigned to a specific project coordinator.
+ * Update the Job Code for a site and mark it as entered.
  *
- * @param {string} coordinatorEmail - The coordinator's email address.
- * @returns {{ success: boolean, data?: object[], error?: string }}
+ * @param {{ siteId: string, jobCode: string }} data
+ * @returns {{ success: boolean }}
  */
-function getSitesByCoordinator(coordinatorEmail) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SITES_SHEET);
-  if (!sheet) return { success: false, error: 'Sites sheet not found.' };
+function updateJobCode(data) {
+  var siteId  = data.siteId;
+  var jobCode = String(data.jobCode || '').trim();
 
-  var data = sheet.getDataRange().getValues();
-  var sites = [];
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    if (!row[0]) continue;
-    if (String(row[3]).trim().toLowerCase() === coordinatorEmail.trim().toLowerCase()) {
-      sites.push(rowToSite(row));
+  if (!siteId)  return { success: false, error: 'siteId is required.' };
+  if (!jobCode) return { success: false, error: 'jobCode cannot be empty.' };
+
+  var sitesSheet = getSheet(TABS.SITES);
+  var values     = sitesSheet.getDataRange().getValues();
+  var headers    = values[0];
+  var siteIdCol  = headers.indexOf('siteId');
+  var jcCol      = headers.indexOf('jobCode');
+  var statusCol  = headers.indexOf('jcStatus');
+
+  for (var i = 1; i < values.length; i++) {
+    if (values[i][siteIdCol] === siteId) {
+      if (jcCol     !== -1) sitesSheet.getRange(i + 1, jcCol     + 1).setValue(jobCode);
+      if (statusCol !== -1) sitesSheet.getRange(i + 1, statusCol + 1).setValue('entered');
+
+      // Check if all sites for this trip now have JC entered → update trip status
+      var tripId    = values[i][headers.indexOf('tripId')];
+      checkAndUpdateTripStatus(tripId);
+
+      return { success: true };
     }
   }
-  return { success: true, data: sites };
-}
 
-/**
- * Updates the Job Code for a single site and changes its jcStatus to ENTERED.
- * If all sites in the parent trip now have a JC, the trip status is set to COMPLETE.
- *
- * @param {string} siteId  - The site's unique identifier.
- * @param {string} jobCode - The new Job Code value.
- * @returns {{ success: boolean, data?: object, error?: string }}
- */
-function updateJobCode(siteId, jobCode) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SITES_SHEET);
-  if (!sheet) return { success: false, error: 'Sites sheet not found.' };
-
-  var data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(siteId)) {
-      var row = i + 1; // Sheets rows are 1-indexed
-      sheet.getRange(row, 5).setValue(jobCode);   // Column E: jobCode
-      sheet.getRange(row, 7).setValue('ENTERED'); // Column G: jcStatus
-
-      var updatedSite = rowToSite(sheet.getRange(row, 1, 1, 7).getValues()[0]);
-
-      // Check if all sites for this trip are now ENTERED — if so, mark trip COMPLETE
-      checkAndCompleteTripIfAllJcEntered(updatedSite.tripId);
-
-      return { success: true, data: updatedSite };
-    }
-  }
   return { success: false, error: 'Site not found: ' + siteId };
 }
 
 /**
- * Appends a new site row to the Sites sheet.
- * Called internally from trips.gs when a trip is created.
- *
- * @param {string} tripId             - Parent trip ID.
- * @param {string} siteNumber         - The site number/identifier.
- * @param {string} coordinatorEmail   - Email of the assigned coordinator.
- * @param {number} costShare          - Pre-calculated cost share for this site.
- */
-function appendSite(tripId, siteNumber, coordinatorEmail, costShare) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SITES_SHEET);
-  if (!sheet) return;
-
-  var siteId = Utilities.getUuid();
-  sheet.appendRow([siteId, tripId, siteNumber, coordinatorEmail, '', costShare, 'PENDING']);
-}
-
-/**
- * Deletes all site rows associated with a given tripId.
- * Called internally from trips.gs when a trip is deleted.
- *
- * @param {string} tripId - The parent trip's ID.
- */
-function deleteSitesByTrip(tripId) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SITES_SHEET);
-  if (!sheet) return;
-
-  var data = sheet.getDataRange().getValues();
-  for (var i = data.length - 1; i >= 1; i--) {
-    if (String(data[i][1]) === String(tripId)) {
-      sheet.deleteRow(i + 1);
-    }
-  }
-}
-
-// ─── Internal helpers ─────────────────────────────────────────────────────────
-
-/**
- * Converts a raw Sheets row array into a Site object.
- *
- * @param {Array} row
- * @returns {object} Site
- */
-function rowToSite(row) {
-  return {
-    siteId:           String(row[0]),
-    tripId:           String(row[1]),
-    siteNumber:       String(row[2]),
-    coordinatorEmail: String(row[3]),
-    jobCode:          String(row[4] || ''),
-    costShare:        Number(row[5]) || 0,
-    jcStatus:         String(row[6] || 'PENDING'),
-  };
-}
-
-/**
- * Checks whether all sites for a given trip have jcStatus === ENTERED.
- * If yes, updates the trip's status to COMPLETE in the Trips sheet.
+ * If all sites for a trip have jcStatus === 'entered', set trip status to 'complete'.
  *
  * @param {string} tripId
  */
-function checkAndCompleteTripIfAllJcEntered(tripId) {
-  var sitesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SITES_SHEET);
-  var tripsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Trips');
-  if (!sitesSheet || !tripsSheet) return;
+function checkAndUpdateTripStatus(tripId) {
+  var sites     = sheetToObjects(getSheet(TABS.SITES));
+  var tripSites = sites.filter(function (s) { return s.tripId === tripId; });
 
-  var sitesData = sitesSheet.getDataRange().getValues();
-  var allEntered = true;
-  var foundSite = false;
+  if (!tripSites.length) return;
 
-  for (var i = 1; i < sitesData.length; i++) {
-    if (String(sitesData[i][1]) === String(tripId)) {
-      foundSite = true;
-      if (String(sitesData[i][6]) !== 'ENTERED') {
-        allEntered = false;
-        break;
-      }
-    }
-  }
+  var allEntered = tripSites.every(function (s) { return s.jcStatus === 'entered'; });
+  if (!allEntered) return;
 
-  if (!foundSite || !allEntered) return;
+  // Update trips sheet status to 'complete'
+  var tripsSheet = getSheet(TABS.TRIPS);
+  var tValues    = tripsSheet.getDataRange().getValues();
+  var headers    = tValues[0];
+  var tripIdCol  = headers.indexOf('tripId');
+  var statusCol  = headers.indexOf('status');
 
-  // Update trip status to COMPLETE
-  var tripsData = tripsSheet.getDataRange().getValues();
-  for (var j = 1; j < tripsData.length; j++) {
-    if (String(tripsData[j][0]) === String(tripId)) {
-      tripsSheet.getRange(j + 1, 11).setValue('COMPLETE'); // Column K: status
-      break;
+  for (var i = 1; i < tValues.length; i++) {
+    if (tValues[i][tripIdCol] === tripId) {
+      tripsSheet.getRange(i + 1, statusCol + 1).setValue('complete');
+      return;
     }
   }
 }

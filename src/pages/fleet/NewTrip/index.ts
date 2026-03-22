@@ -1,1 +1,0 @@
-export { NewTrip } from './NewTrip';

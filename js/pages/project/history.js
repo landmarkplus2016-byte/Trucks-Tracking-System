@@ -1,0 +1,100 @@
+/**
+ * pages/project/history.js
+ * ────────────────────────
+ * Project coordinator trip history with cost breakdown.
+ */
+
+(async function () {
+  const user = requireRole(ROLES.PROJECT);
+  renderNavbar(ROUTES.PROJECT_HISTORY);
+  initNotificationBell();
+
+  const loadingEl    = document.getElementById('loading');
+  const errorEl      = document.getElementById('page-error');
+  const tbody        = document.getElementById('history-tbody');
+  const filterDate   = document.getElementById('filter-date');
+  const filterStatus = document.getElementById('filter-status');
+
+  let allTrips = [];
+
+  try {
+    allTrips = await getTrips({ email: user.email, role: ROLES.PROJECT });
+    loadingEl.classList.add('hidden');
+    renderTable(allTrips);
+  } catch (err) {
+    loadingEl.classList.add('hidden');
+    errorEl.textContent = err.message || 'Failed to load history.';
+    errorEl.classList.remove('hidden');
+  }
+
+  [filterDate, filterStatus].forEach(el => el?.addEventListener('input', applyFilters));
+
+  function applyFilters() {
+    const date   = filterDate?.value   || '';
+    const status = filterStatus?.value || '';
+    const filtered = allTrips.filter(t => {
+      if (date   && !t.date?.startsWith(date)) return false;
+      if (status && t.status !== status)       return false;
+      return true;
+    });
+    renderTable(filtered);
+  }
+
+  function renderTable(trips) {
+    if (!trips.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No trips found.</td></tr>';
+      return;
+    }
+    const sorted = [...trips].sort((a, b) => new Date(b.date) - new Date(a.date));
+    tbody.innerHTML = sorted.map(t => `
+      <tr>
+        <td>${escapeHtml(t.tripId)}</td>
+        <td>${formatDate(t.date)}</td>
+        <td>${escapeHtml(t.route)}</td>
+        <td class="num">${formatCurrency(t.totalCost)}</td>
+        <td><span class="status-pill ${t.status}">${t.status}</span></td>
+        <td>
+          <button class="trip-expand-btn" onclick="toggleDetail(this, '${escapeHtml(t.tripId)}')">
+            View Cost Breakdown ▸
+          </button>
+        </td>
+      </tr>
+      <tr class="detail-row hidden" id="detail-${escapeHtml(t.tripId)}">
+        <td colspan="6">
+          <div class="trip-detail-panel" id="breakdown-${escapeHtml(t.tripId)}">
+            <span class="spinner"></span> Loading…
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  window.toggleDetail = async function (btn, tripId) {
+    const detailRow = document.getElementById(`detail-${tripId}`);
+    const breakdownEl = document.getElementById(`breakdown-${tripId}`);
+    const isOpen = !detailRow.classList.contains('hidden');
+
+    if (isOpen) {
+      detailRow.classList.add('hidden');
+      btn.textContent = 'View Cost Breakdown ▸';
+      return;
+    }
+
+    detailRow.classList.remove('hidden');
+    btn.textContent = 'Hide ▾';
+
+    try {
+      const sites = await getSitesByTrip(tripId);
+      const trip  = allTrips.find(t => t.tripId === tripId);
+      if (!trip) return;
+      const breakdown = buildCostBreakdown(trip, sites);
+      breakdown.laborCost  = trip.laborCost;
+      breakdown.parkCost   = trip.parkCost;
+      breakdown.truckCost  = trip.truckCost;
+      breakdown.hotelCost  = trip.hotelCost;
+      renderCostSummary(breakdownEl, breakdown);
+    } catch (err) {
+      breakdownEl.innerHTML = `<span class="text-danger">${escapeHtml(err.message || 'Failed to load breakdown.')}</span>`;
+    }
+  };
+})();

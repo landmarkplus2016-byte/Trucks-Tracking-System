@@ -1,257 +1,157 @@
-# Trucks Tracking System (TTS)
+# Trucks Tracking System
 
-A Progressive Web App (PWA) for managing truck fleet trips, cost allocation, and job code entry across Fleet Coordinators and Project Coordinators.
-
-**Stack:** React + TypeScript + Vite · Google Apps Script · Google Sheets · GitHub Pages · CSS Modules
-
----
-
-## Table of Contents
-
-1. [Prerequisites](#prerequisites)
-2. [Local Development Setup](#local-development-setup)
-3. [Google Sheets Setup](#google-sheets-setup)
-4. [Apps Script Deployment](#apps-script-deployment)
-5. [GitHub Repository Setup](#github-repository-setup)
-6. [GitHub Actions / CI-CD Setup](#github-actions--ci-cd-setup)
-7. [Project Structure](#project-structure)
-8. [Environment Variables](#environment-variables)
-9. [Cost Calculation Rules](#cost-calculation-rules)
-10. [Role Reference](#role-reference)
+A fleet cost-tracking web app for the Telecom Department.
+Built with plain HTML / CSS / Vanilla JS — no build tools required.
+Hosted on GitHub Pages. Backend is Google Apps Script + Google Sheets.
 
 ---
 
-## Prerequisites
+## Roles
 
-| Tool | Minimum Version |
+| Role | Can do |
 |---|---|
-| Node.js | 20.x |
-| npm | 10.x |
-| Git | any recent version |
-| Google account | — |
-| GitHub account | — |
+| **Fleet Coordinator** | Create / edit / delete trips, add sites, view cost breakdowns |
+| **Project Coordinator** | Receive notifications, enter Job Codes for their sites, view history |
 
 ---
 
-## Local Development Setup
+## Quick Start (first-time setup)
 
-```bash
-# 1. Clone the repo (after pushing — see GitHub Repository Setup below)
-git clone https://github.com/<YOUR_USERNAME>/trucks-tracking-system.git
-cd trucks-tracking-system
-
-# 2. Install dependencies
-npm install
-
-# 3. Create your local .env file
-cp .env.example .env
-# Then open .env and paste your Apps Script Web App URL
-
-# 4. Start the dev server
-npm run dev
-# → http://localhost:5173/trucks-tracking-system/
-
-# 5. Build for production (optional local test)
-npm run build
-npm run preview
-```
-
----
-
-## Google Sheets Setup
+### 1. Create the Google Sheet
 
 1. Go to [sheets.google.com](https://sheets.google.com) and create a new spreadsheet.
-2. Name it: **Trucks Tracking System**
-3. Create the following tabs (right-click a tab → **Rename**):
+2. Rename **Sheet1** to `Trips` and add these headers in row 1 (exact spelling):
 
-### Tab: `Trips`
-| A | B | C | D | E | F | G | H | I | J | K | L | M |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| tripId | date | whRep | driver | route | laborCost | parkCost | truckCost | hotelCost | totalCost | status | createdBy | createdAt |
+   ```
+   tripId | date | whRep | driver | route | laborCost | parkCost | truckCost | hotelCost | totalCost | status | createdBy | createdAt
+   ```
 
-### Tab: `Sites`
-| A | B | C | D | E | F | G |
-|---|---|---|---|---|---|---|
-| siteId | tripId | siteNumber | coordinatorEmail | jobCode | costShare | jcStatus |
+3. Add three more tabs and their headers:
 
-### Tab: `Users`
-| A | B | C | D | E |
-|---|---|---|---|---|
-| userId | name | email | role | password |
+   **Sites**
+   ```
+   siteId | tripId | siteNumber | coordinatorEmail | jobCode | costShare | jcStatus
+   ```
 
-Add at least one user per role to get started:
+   **Users**
+   ```
+   userId | name | email | role | password
+   ```
 
-| userId | name | email | role | password |
-|---|---|---|---|---|
-| u001 | Fleet Manager | fleet@example.com | fleet | changeme123 |
-| u002 | Project Coord 1 | coord1@example.com | project | changeme123 |
-| u003 | Project Coord 2 | coord2@example.com | project | changeme123 |
+   **Notifications**
+   ```
+   notifId | toEmail | tripId | message | isRead | createdAt
+   ```
 
-### Tab: `Notifications`
-| A | B | C | D | E | F |
-|---|---|---|---|---|---|
-| notifId | toEmail | tripId | message | isRead | createdAt |
+4. Add your users to the **Users** tab. Example row:
+   ```
+   USER-001 | Alice Fleet | alice@company.com | fleet | mypassword
+   ```
 
-> **Note:** Row 1 of every tab must contain the column headers exactly as shown. Apps Script reads by column position, not by header name.
+### 2. Deploy the Apps Script
 
----
-
-## Apps Script Deployment
-
-1. In your Google Sheet, go to **Extensions → Apps Script**.
-2. The script editor opens. **Delete** the default `Code.gs` content.
-3. For each `.gs` file in the `apps-script/` folder of this repo, create a corresponding file in the script editor:
-   - Click **+** next to "Files" → **Script**
-   - Name it exactly (e.g. `trips`, `sites`, `costs`, `notifications`, `auth`)
-   - Paste the contents of the matching `.gs` file
-
-   Files to create:
-   - `Code` ← paste `apps-script/Code.gs`
-   - `trips` ← paste `apps-script/trips.gs`
-   - `sites` ← paste `apps-script/sites.gs`
-   - `costs` ← paste `apps-script/costs.gs`
-   - `notifications` ← paste `apps-script/notifications.gs`
-   - `auth` ← paste `apps-script/auth.gs`
-
+1. In your Google Sheet, open **Extensions → Apps Script**.
+2. Delete the default `Code.gs` content.
+3. Create one file for each `.gs` file in the `apps-script/` folder of this repo.
+   Copy-paste the contents of each file into the corresponding Apps Script file.
 4. Click **Deploy → New deployment**.
-5. Click the gear icon next to **Type** → select **Web app**.
-6. Fill in:
-   - **Description:** `TTS v1`
-   - **Execute as:** `Me`
-   - **Who has access:** `Anyone` *(required for the React app to call it)*
-7. Click **Deploy**.
-8. Authorize the script (Google will ask for Gmail and Sheets permissions).
-9. **Copy the Web app URL** — it looks like:
-   ```
-   https://script.google.com/macros/s/AKfycb.../exec
-   ```
-10. Paste this URL into your `.env` file:
-    ```
-    VITE_APPS_SCRIPT_URL=https://script.google.com/macros/s/AKfycb.../exec
-    ```
-11. Also add it as a **GitHub Secret** (see next section).
+   - Type: **Web App**
+   - Execute as: **Me**
+   - Who has access: **Anyone** (required for GitHub Pages to reach it)
+5. Click **Deploy** and copy the Web App URL.
 
-> **Redeployment:** Any time you change a `.gs` file, go to **Deploy → Manage deployments → Edit (pencil icon) → New version → Deploy**.
+### 3. Update the App URL
 
----
+Open `js/config/config.js` and replace the placeholder:
 
-## GitHub Repository Setup
+```js
+APPS_SCRIPT_URL: 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec',
+```
+
+with your actual Web App URL.
+
+### 4. Push to GitHub Pages
 
 ```bash
-# 1. Inside the project folder, initialize git
+# Initialize repo (if not done yet)
 git init
+git remote add origin https://github.com/YOUR_USERNAME/trucks-tracking-system.git
 
-# 2. Stage all files
+# Stage and commit everything
 git add .
-
-# 3. First commit
 git commit -m "Initial commit: Trucks Tracking System"
 
-# 4. Create a new repo on GitHub (do NOT initialize with README)
-#    Then connect and push:
-git remote add origin https://github.com/<YOUR_USERNAME>/trucks-tracking-system.git
-git branch -M main
+# Push to main
 git push -u origin main
 ```
 
----
+Then in your GitHub repo:
+**Settings → Pages → Source → Deploy from branch → main / (root)**
 
-## GitHub Actions / CI-CD Setup
-
-The workflow file at `.github/workflows/deploy.yml` runs automatically on every push to `main`. It:
-1. Installs dependencies (`npm ci`)
-2. Injects environment variables from GitHub Secrets
-3. Runs `npm run build`
-4. Deploys the `/dist` folder to GitHub Pages
-
-### Steps to enable GitHub Pages + Secrets:
-
-1. Go to your repo on GitHub → **Settings → Pages**
-2. Under **Source**, select **GitHub Actions**
-3. Go to **Settings → Secrets and variables → Actions → New repository secret**
-4. Add:
-   - **Name:** `VITE_APPS_SCRIPT_URL`
-   - **Value:** your Apps Script Web App URL
-
-5. Push any change to `main` to trigger the first deployment.
-6. Your app will be live at:
-   ```
-   https://<YOUR_USERNAME>.github.io/trucks-tracking-system/
-   ```
+Your app will be live at:
+`https://YOUR_USERNAME.github.io/trucks-tracking-system/`
 
 ---
 
 ## Project Structure
 
 ```
-src/
-  components/
-    common/          Button, Input, Card, NotificationBell
-    fleet/           TripForm, CostSummary, SiteList
-    project/         JCEntry, SiteCostBreakdown
-  pages/
-    Login/
-    fleet/           Dashboard, NewTrip, History
-    project/         Dashboard, PendingJC, History
-  hooks/             useAuth, useTrips, useNotifications
-  services/          sheets.service, auth.service, notify.service
-  styles/            colors.ts, typography.ts, spacing.ts, theme.ts, global.css
-  types/             index.ts  (all TypeScript interfaces)
-  constants/         index.ts  (all app constants)
-  utils/             cost-calculator.ts, date-formatter.ts
-  App.tsx            BrowserRouter wrapper
-  AppLayout.tsx      Top nav + Outlet layout
-  router.tsx         Role-based route definitions
-  main.tsx           ReactDOM entry point
-
-apps-script/         Code.gs, trips.gs, sites.gs, costs.gs, notifications.gs, auth.gs
-public/              manifest.json, favicon.svg, icons/
-.github/workflows/   deploy.yml
+index.html                  ← Login (entry point)
+pages/
+  fleet/
+    dashboard.html
+    new-trip.html
+    edit-trip.html
+    history.html
+  project/
+    dashboard.html
+    pending-jc.html
+    history.html
+css/
+  base/                     ← variables, reset, typography, layout
+  components/               ← button, input, card, table, etc.
+  pages/                    ← per-page styles
+js/
+  config/config.js          ← APPS_SCRIPT_URL (only here)
+  constants/index.js        ← ROLES, TRIP_STATUS, JC_STATUS, ROUTES
+  types/schemas.js          ← JSDoc type definitions
+  utils/                    ← cost-calculator, date-formatter, validator
+  services/                 ← api, auth, trips, sites, notify
+  components/               ← navbar, notification-bell, modal, etc.
+  pages/                    ← per-page scripts
+apps-script/                ← Google Apps Script .gs files
 ```
 
 ---
 
-## Environment Variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `VITE_APPS_SCRIPT_URL` | Yes | Google Apps Script Web App URL |
-
-All `VITE_` prefixed variables are embedded at build time by Vite. They are **not secret at runtime** (they appear in the compiled JS). Use Google Apps Script's own authorization to protect your Sheet data.
-
----
-
-## Cost Calculation Rules
+## Cost Calculation
 
 ```
-totalCost    = laborCost + parkCost + truckCost + hotelCost
-costPerSite  = totalCost / totalSites          (rounded to 2 dp)
-coordTotal   = costPerSite × coordSiteCount    (rounded to 2 dp)
+costPerSite        = totalTripCost ÷ totalSites
+coordinatorTotal   = costPerSite × coordinatorSiteCount
 ```
 
-- Implemented in TypeScript: [`src/utils/cost-calculator.ts`](src/utils/cost-calculator.ts)
-- Mirrored in Apps Script: [`apps-script/costs.gs`](apps-script/costs.gs)
+Logic lives only in `js/utils/cost-calculator.js` (client) and `apps-script/costs.gs` (server).
 
 ---
 
-## Role Reference
+## Re-deploying After Changes
 
-| Role | Can do |
-|---|---|
-| **fleet** | Create / edit / delete trips · Assign sites to coordinators · See full cost breakdown |
-| **project** | View trips that include their sites · Enter / edit Job Codes · See their cost share |
+After editing any Apps Script file:
+1. **Deploy → Manage deployments → Edit (pencil icon)**
+2. Change version to **New version**
+3. Click **Deploy**
 
----
-
-## PWA Icons
-
-The `public/icons/` folder is referenced in `manifest.json` but the PNG files are **not included** in this repo. Generate them from `public/favicon.svg` using a tool such as:
-
-- [PWA Asset Generator](https://github.com/elegantapp/pwa-asset-generator): `npx pwa-asset-generator public/favicon.svg public/icons`
-- Or any online icon generator (e.g. realfavicongenerator.net)
-
-Required sizes: 72, 96, 128, 144, 152, 192, 384, 512 px.
+The URL stays the same — no need to update `config.js`.
 
 ---
 
-*Built with React + TypeScript + Vite · Backend: Google Apps Script · Database: Google Sheets*
+## Adding PWA Icons
+
+Place 192×192 and 512×512 PNG icons at:
+```
+assets/icons/icon-192.png
+assets/icons/icon-512.png
+```
+
+Users can then "Add to Home Screen" on mobile.

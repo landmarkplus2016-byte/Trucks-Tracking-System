@@ -1,94 +1,59 @@
 /**
- * auth.gs — User authentication and role resolution.
+ * auth.gs — User authentication
+ * ──────────────────────────────
+ * Reads the Users sheet to validate credentials.
  *
- * Reads from the "Users" tab in Google Sheets.
- * Expected columns (row 1 = headers):
- *   A: userId | B: name | C: email | D: role | E: password
+ * Users sheet columns (in order):
+ *   userId | name | email | role | password
  *
- * NOTE: Storing passwords in plain text in a Sheet is acceptable for an
- * internal-only tool, but for production you should hash passwords (e.g.
- * with Utilities.computeDigest) and never store them in plain text.
+ * NOTE: Passwords are stored in plain text in this sheet.
+ * For a production system, hash them (e.g. using SHA-256 via Utilities.computeDigest).
  */
-
-var USERS_SHEET = 'Users';
 
 /**
- * Validates a user's credentials.
- * Returns { success: true, data: User } on success,
- * or { success: false, error: "…" } on failure.
- *
- * @param {string} email    - The user's email address.
- * @param {string} password - The user's plain-text password.
- * @returns {{ success: boolean, data?: object, error?: string }}
+ * Validate login credentials.
+ * @param {{ email: string, password: string }} data
+ * @returns {{ success: boolean, data?: Object, error?: string }}
  */
-function validateUser(email, password) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(USERS_SHEET);
-  if (!sheet) return { success: false, error: 'Users sheet not found.' };
+function validateUser(data) {
+  var email    = String(data.email    || '').trim().toLowerCase();
+  var password = String(data.password || '');
 
-  var data = sheet.getDataRange().getValues();
-  // Row 0 is the header row — skip it
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    var rowEmail    = String(row[2]).trim().toLowerCase();
-    var rowPassword = String(row[4]).trim();
-    if (rowEmail === email.trim().toLowerCase() && rowPassword === password) {
-      return {
-        success: true,
-        data: {
-          userId: String(row[0]),
-          name:   String(row[1]),
-          email:  String(row[2]),
-          role:   String(row[3]),
-        },
-      };
-    }
+  if (!email || !password) {
+    return { success: false, error: 'Email and password are required.' };
   }
-  return { success: false, error: 'Invalid email or password.' };
+
+  var users = sheetToObjects(getSheet(TABS.USERS));
+  var user  = users.find(function (u) {
+    return String(u.email || '').trim().toLowerCase() === email
+        && String(u.password || '') === password;
+  });
+
+  if (!user) {
+    return { success: false, error: 'Invalid email or password.' };
+  }
+
+  // Return user without the password field
+  return {
+    success: true,
+    data: {
+      userId: user.userId,
+      name:   user.name,
+      email:  user.email,
+      role:   user.role,
+    },
+  };
 }
 
 /**
- * Returns all users with the "project" role.
- * Used by the fleet coordinator when building a new trip so they can
- * assign sites to coordinators.
- *
- * @returns {{ success: boolean, data?: object[], error?: string }}
- */
-function getProjectCoordinators() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(USERS_SHEET);
-  if (!sheet) return { success: false, error: 'Users sheet not found.' };
-
-  var data = sheet.getDataRange().getValues();
-  var coordinators = [];
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    if (String(row[3]).trim().toLowerCase() === 'project') {
-      coordinators.push({
-        userId: String(row[0]),
-        name:   String(row[1]),
-        email:  String(row[2]),
-        role:   String(row[3]),
-      });
-    }
-  }
-  return { success: true, data: coordinators };
-}
-
-/**
- * Returns the role of a user identified by email.
- * Returns null if the user is not found.
- *
- * @param {string} email - The user's email address.
- * @returns {string|null} - "fleet" | "project" | null
+ * Get a user's role by email.
+ * @param {string} email
+ * @returns {string|null}
  */
 function getUserRole(email) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(USERS_SHEET);
-  if (!sheet) return null;
-
-  var data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][2]).trim().toLowerCase() === email.trim().toLowerCase()) {
-      return String(data[i][3]).trim().toLowerCase();
-    }
-  }
-  return null;
+  var users = sheetToObjects(getSheet(TABS.USERS));
+  var user  = users.find(function (u) {
+    return String(u.email || '').trim().toLowerCase() === String(email || '').trim().toLowerCase();
+  });
+  return user ? user.role : null;
 }

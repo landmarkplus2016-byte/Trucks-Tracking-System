@@ -1,0 +1,61 @@
+/* ============================================================
+   pending-jc.css — project coordinator: enter job codes
+   ============================================================ */
+
+.pending-trip-card {
+  margin-bottom: var(--space-6);
+}
+
+.pending-trip-card .card-header {
+  background-color: var(--color-primary-light);
+}
+
+.trip-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.trip-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.trip-info-label {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-medium);
+}
+
+.trip-info-value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.my-sites-table {
+  margin-top: var(--space-4);
+}
+
+.jc-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.jc-input-row .form-control {
+  max-width: 200px;
+}
+
+.jc-saved-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-success);
+  font-weight: var(--font-weight-medium);
+}

@@ -1,16 +1,90 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/trucks-tracking-system/favicon.svg" />
-    <link rel="manifest" href="/trucks-tracking-system/manifest.json" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#1a3a5c" />
-    <meta name="description" content="Trucks Tracking System — Fleet & Project Coordinator Portal" />
-    <title>Trucks Tracking System</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Trucks Tracking System — Login" />
+  <title>Sign In — Trucks Tracking System</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Base styles -->
+  <link rel="stylesheet" href="/css/base/variables.css" />
+  <link rel="stylesheet" href="/css/base/reset.css" />
+  <link rel="stylesheet" href="/css/base/typography.css" />
+  <link rel="stylesheet" href="/css/base/layout.css" />
+  <!-- Component styles -->
+  <link rel="stylesheet" href="/css/components/button.css" />
+  <link rel="stylesheet" href="/css/components/input.css" />
+  <!-- Page style -->
+  <link rel="stylesheet" href="/css/pages/login.css" />
+</head>
+<body>
+  <main class="login-page">
+    <div class="login-card">
+
+      <div class="login-header">
+        <div class="login-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="36" height="36">
+            <rect x="1" y="3" width="15" height="13" rx="1"/>
+            <path d="M16 8h4l3 3v5h-7V8z"/>
+            <circle cx="5.5" cy="18.5" r="2.5"/>
+            <circle cx="18.5" cy="18.5" r="2.5"/>
+          </svg>
+          <span class="login-title">Trucks Tracking</span>
+        </div>
+        <p class="login-subtitle">Telecom Department Fleet Management</p>
+      </div>
+
+      <div class="login-body">
+        <div id="login-error" class="alert alert-danger hidden" role="alert"></div>
+
+        <form id="login-form" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="login-email">Email address</label>
+            <input
+              type="email"
+              id="login-email"
+              class="form-control"
+              placeholder="you@example.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="login-password">Password</label>
+            <input
+              type="password"
+              id="login-password"
+              class="form-control"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+
+          <button type="submit" id="login-submit" class="btn btn-primary btn-full btn-lg">
+            Sign In
+          </button>
+        </form>
+      </div>
+
+      <div class="login-footer">
+        Contact your administrator if you cannot sign in.
+      </div>
+
+    </div>
+  </main>
+
+  <!-- JS load order: config → constants → utils → services → page -->
+  <script src="/js/config/config.js"></script>
+  <script src="/js/constants/index.js"></script>
+  <script src="/js/utils/date-formatter.js"></script>
+  <script src="/js/utils/cost-calculator.js"></script>
+  <script src="/js/utils/validator.js"></script>
+  <script src="/js/services/api.service.js"></script>
+  <script src="/js/services/auth.service.js"></script>
+  <script src="/js/pages/login.js"></script>
+</body>
 </html>

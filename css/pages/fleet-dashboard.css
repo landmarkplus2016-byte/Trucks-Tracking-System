@@ -1,0 +1,20 @@
+/* ============================================================
+   fleet-dashboard.css — fleet coordinator dashboard
+   ============================================================ */
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.recent-trips-section {
+  margin-top: var(--space-6);
+}
+
+.trip-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

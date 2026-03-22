@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trip History — Fleet Coordinator</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <link rel="stylesheet" href="/css/base/variables.css" />
+  <link rel="stylesheet" href="/css/base/reset.css" />
+  <link rel="stylesheet" href="/css/base/typography.css" />
+  <link rel="stylesheet" href="/css/base/layout.css" />
+  <link rel="stylesheet" href="/css/components/button.css" />
+  <link rel="stylesheet" href="/css/components/input.css" />
+  <link rel="stylesheet" href="/css/components/card.css" />
+  <link rel="stylesheet" href="/css/components/table.css" />
+  <link rel="stylesheet" href="/css/components/modal.css" />
+  <link rel="stylesheet" href="/css/components/navbar.css" />
+  <link rel="stylesheet" href="/css/components/notification-bell.css" />
+  <link rel="stylesheet" href="/css/pages/history.css" />
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+
+  <div class="page-wrapper">
+    <div class="container">
+
+      <div class="page-header">
+        <h1 class="page-title">Trip History</h1>
+        <a href="/pages/fleet/new-trip.html" class="btn btn-primary">+ New Trip</a>
+      </div>
+
+      <div id="page-error" class="alert alert-danger hidden" role="alert"></div>
+
+      <!-- Filters -->
+      <div class="history-filters">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="month" id="filter-date" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="filter-status" class="form-control">
+            <option value="">All</option>
+            <option value="draft">Draft</option>
+            <option value="active">Active</option>
+            <option value="complete">Complete</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:2">
+          <label>Search</label>
+          <input type="text" id="filter-search" class="form-control" placeholder="Driver, route, trip ID…" />
+        </div>
+      </div>
+
+      <div id="loading" class="loading-overlay">
+        <span class="spinner"></span>
+        Loading history…
+      </div>
+
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Trip ID</th>
+              <th>Date</th>
+              <th>Driver</th>
+              <th>Route</th>
+              <th class="num">Total Cost</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <tr><td colspan="7" class="text-center text-muted">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/js/config/config.js"></script>
+  <script src="/js/constants/index.js"></script>
+  <script src="/js/utils/date-formatter.js"></script>
+  <script src="/js/utils/cost-calculator.js"></script>
+  <script src="/js/utils/validator.js"></script>
+  <script src="/js/services/api.service.js"></script>
+  <script src="/js/services/auth.service.js"></script>
+  <script src="/js/services/trips.service.js"></script>
+  <script src="/js/services/sites.service.js"></script>
+  <script src="/js/services/notify.service.js"></script>
+  <script src="/js/components/navbar.js"></script>
+  <script src="/js/components/notification-bell.js"></script>
+  <script src="/js/components/modal.js"></script>
+  <script src="/js/pages/fleet/history.js"></script>
+</body>
+</html>

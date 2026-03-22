@@ -1,0 +1,82 @@
+/* ============================================================
+   table.css — data tables
+   ============================================================ */
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--color-surface);
+  font-size: var(--font-size-sm);
+}
+
+.table thead {
+  background-color: var(--color-bg);
+}
+
+.table th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border-light);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-light);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background-color: var(--color-primary-light);
+}
+
+.table-striped tbody tr:nth-child(even) {
+  background-color: var(--color-bg);
+}
+
+.table tfoot td {
+  font-weight: var(--font-weight-semibold);
+  background-color: var(--color-bg);
+  border-top: 2px solid var(--color-border);
+  padding: var(--space-3) var(--space-4);
+}
+
+/* Numeric columns */
+.table td.num,
+.table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-family-mono);
+}
+
+/* Status pills in table */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.status-pill.pending   { background: var(--color-warning-light); color: var(--color-warning); }
+.status-pill.complete  { background: var(--color-success-light); color: var(--color-success); }
+.status-pill.draft     { background: var(--color-info-light);    color: var(--color-info); }

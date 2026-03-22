@@ -1,0 +1,32 @@
+/* ============================================================
+   project-dashboard.css — project coordinator dashboard
+   ============================================================ */
+
+.pending-count-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.pending-count-banner svg {
+  color: var(--color-warning);
+  flex-shrink: 0;
+}
+
+.pending-count-banner strong {
+  font-weight: var(--font-weight-bold);
+}
+
+.coordinator-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}

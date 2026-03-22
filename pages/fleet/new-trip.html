@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New Trip — Fleet Coordinator</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <link rel="stylesheet" href="/css/base/variables.css" />
+  <link rel="stylesheet" href="/css/base/reset.css" />
+  <link rel="stylesheet" href="/css/base/typography.css" />
+  <link rel="stylesheet" href="/css/base/layout.css" />
+  <link rel="stylesheet" href="/css/components/button.css" />
+  <link rel="stylesheet" href="/css/components/input.css" />
+  <link rel="stylesheet" href="/css/components/card.css" />
+  <link rel="stylesheet" href="/css/components/modal.css" />
+  <link rel="stylesheet" href="/css/components/navbar.css" />
+  <link rel="stylesheet" href="/css/components/notification-bell.css" />
+  <link rel="stylesheet" href="/css/pages/new-trip.css" />
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+
+  <div class="page-wrapper">
+    <div class="container">
+
+      <div class="page-header">
+        <h1 class="page-title">New Trip</h1>
+        <a href="/pages/fleet/dashboard.html" class="btn btn-secondary">← Back</a>
+      </div>
+
+      <div id="form-error" class="alert alert-danger hidden" role="alert"></div>
+
+      <form id="trip-form" novalidate>
+        <div class="card trip-form-card">
+          <div class="card-header"><span class="card-title">Trip Details</span></div>
+          <div class="card-body">
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="trip-date">Date <span class="required">*</span></label>
+                <input type="date" id="trip-date" class="form-control" data-field="date" required />
+                <span class="form-error hidden" data-error="date"></span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="wh-rep">WH Representative <span class="required">*</span></label>
+                <input type="text" id="wh-rep" class="form-control" data-field="whRep" placeholder="Warehouse rep name" />
+                <span class="form-error hidden" data-error="whRep"></span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="driver">Driver <span class="required">*</span></label>
+                <input type="text" id="driver" class="form-control" data-field="driver" placeholder="Driver name" />
+                <span class="form-error hidden" data-error="driver"></span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="route">Route <span class="required">*</span></label>
+                <input type="text" id="route" class="form-control" data-field="route" placeholder="e.g. Warehouse → Site A → Site B" />
+                <span class="form-error hidden" data-error="route"></span>
+              </div>
+            </div>
+
+            <!-- Cost fields -->
+            <div class="cost-section">
+              <div class="cost-section-title">Costs</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="labor-cost">Labor Cost ($)</label>
+                  <input type="number" id="labor-cost" class="form-control" data-field="laborCost" value="0" min="0" step="0.01" />
+                  <span class="form-error hidden" data-error="laborCost"></span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="park-cost">Parking Cost ($)</label>
+                  <input type="number" id="park-cost" class="form-control" data-field="parkCost" value="0" min="0" step="0.01" />
+                  <span class="form-error hidden" data-error="parkCost"></span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="truck-cost">Truck Cost ($)</label>
+                  <input type="number" id="truck-cost" class="form-control" data-field="truckCost" value="0" min="0" step="0.01" />
+                  <span class="form-error hidden" data-error="truckCost"></span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="hotel-cost">Hotel Cost ($)</label>
+                  <input type="number" id="hotel-cost" class="form-control" data-field="hotelCost" value="0" min="0" step="0.01" />
+                  <span class="form-error hidden" data-error="hotelCost"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live cost preview -->
+            <div class="cost-preview">
+              <div class="cost-preview-title">Cost Preview</div>
+              <div class="cost-preview-row"><span>Labor</span>  <span id="preview-labor">$0.00</span></div>
+              <div class="cost-preview-row"><span>Parking</span><span id="preview-park">$0.00</span></div>
+              <div class="cost-preview-row"><span>Truck</span>  <span id="preview-truck">$0.00</span></div>
+              <div class="cost-preview-row"><span>Hotel</span>  <span id="preview-hotel">$0.00</span></div>
+              <div class="cost-preview-total">
+                <span>Total</span>
+                <span id="preview-total">$0.00</span>
+              </div>
+              <div class="cost-preview-row mt-2">
+                <span>Per Site</span>
+                <span id="preview-per-site">—</span>
+              </div>
+            </div>
+
+            <!-- Sites -->
+            <div class="sites-block">
+              <div class="section-title">Sites</div>
+              <span class="form-error hidden" data-error="sites"></span>
+              <div id="sites-container"></div>
+              <button type="button" id="add-site-btn" class="btn btn-secondary add-site-btn">
+                + Add Another Site
+              </button>
+            </div>
+
+          </div>
+          <div class="card-footer">
+            <a href="/pages/fleet/dashboard.html" class="btn btn-secondary">Cancel</a>
+            <button type="submit" id="submit-btn" class="btn btn-primary">Submit Trip</button>
+          </div>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <script src="/js/config/config.js"></script>
+  <script src="/js/constants/index.js"></script>
+  <script src="/js/utils/date-formatter.js"></script>
+  <script src="/js/utils/cost-calculator.js"></script>
+  <script src="/js/utils/validator.js"></script>
+  <script src="/js/services/api.service.js"></script>
+  <script src="/js/services/auth.service.js"></script>
+  <script src="/js/services/trips.service.js"></script>
+  <script src="/js/services/sites.service.js"></script>
+  <script src="/js/services/notify.service.js"></script>
+  <script src="/js/components/navbar.js"></script>
+  <script src="/js/components/notification-bell.js"></script>
+  <script src="/js/components/modal.js"></script>
+  <script src="/js/pages/fleet/new-trip.js"></script>
+</body>
+</html>

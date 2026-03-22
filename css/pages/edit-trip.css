@@ -1,0 +1,16 @@
+/* ============================================================
+   edit-trip.css — edit existing trip page (reuses new-trip layout)
+   ============================================================ */
+
+.edit-trip-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.edit-trip-meta strong {
+  color: var(--color-text-primary);
+}
