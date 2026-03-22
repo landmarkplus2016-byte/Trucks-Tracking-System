@@ -1,0 +1,30 @@
+.display {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.jcValue {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-mono);
+}
+
+.empty {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-normal);
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+}

@@ -1,0 +1,66 @@
+name: Build and Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, cancel any in-progress deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      # ── 1. Checkout the repository ─────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Node.js ──────────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # ── 3. Install dependencies ────────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 4. Inject environment variables from GitHub Secrets ───────────────
+      #    Add VITE_APPS_SCRIPT_URL to your repo's Settings → Secrets
+      - name: Create .env from secrets
+        run: |
+          echo "VITE_APPS_SCRIPT_URL=${{ secrets.VITE_APPS_SCRIPT_URL }}" >> .env
+
+      # ── 5. Build the Vite app ──────────────────────────────────────────────
+      - name: Build
+        run: npm run build
+
+      # ── 6. Configure GitHub Pages ──────────────────────────────────────────
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # ── 7. Upload the /dist folder as the Pages artifact ──────────────────
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./dist"
+
+      # ── 8. Deploy to GitHub Pages ──────────────────────────────────────────
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

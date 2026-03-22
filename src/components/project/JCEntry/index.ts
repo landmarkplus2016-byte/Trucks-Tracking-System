@@ -1,0 +1,1 @@
+export { JCEntry } from './JCEntry';
