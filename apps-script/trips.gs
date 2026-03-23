@@ -37,6 +37,11 @@ function getTrips(data) {
       }
     });
 
+    // No matching sites — return early with empty array
+    if (Object.keys(myTripIds).length === 0) {
+      return { success: true, data: [] };
+    }
+
     trips = trips.filter(function (t) { return myTripIds[t.tripId]; });
   }
 
