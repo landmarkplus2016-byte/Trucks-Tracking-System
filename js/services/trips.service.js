@@ -46,3 +46,22 @@ async function deleteTrip(tripId) {
   const result = await fetchAPI(ACTIONS.DELETE_TRIP, { tripId });
   if (!result.success) throw new Error(result.error);
 }
+
+/**
+ * Get all entries for a named list (e.g. 'whRep').
+ * @param {string} listName
+ * @returns {Promise<Array<{ value: string, label: string, sortOrder: number }>>}
+ */
+async function getLists(listName) {
+  const result = await fetchAPI(ACTIONS.GET_LIST, { listName });
+  return result.data || [];
+}
+
+/**
+ * Get all project coordinators (name + email) from the Users sheet.
+ * @returns {Promise<Array<{ email: string, name: string }>>}
+ */
+async function getCoordinators() {
+  const result = await fetchAPI(ACTIONS.GET_COORDINATORS, {});
+  return result.data || [];
+}

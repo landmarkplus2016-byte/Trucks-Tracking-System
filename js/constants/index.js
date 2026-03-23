@@ -56,4 +56,6 @@ const ACTIONS = Object.freeze({
   GET_COST_BREAKDOWN:       'getCostBreakdown',
   GET_UNREAD_NOTIFICATIONS: 'getUnreadNotifications',
   MARK_NOTIF_READ:          'markNotifRead',
+  GET_LIST:                 'getList',
+  GET_COORDINATORS:         'getCoordinators',
 });

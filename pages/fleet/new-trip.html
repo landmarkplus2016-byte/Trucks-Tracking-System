@@ -45,7 +45,9 @@
               </div>
               <div class="form-group">
                 <label class="form-label" for="wh-rep">WH Representative <span class="required">*</span></label>
-                <input type="text" id="wh-rep" class="form-control" data-field="whRep" placeholder="Warehouse rep name" />
+                <select id="wh-rep" class="form-control" data-field="whRep">
+                  <option value="">Loading…</option>
+                </select>
                 <span class="form-error hidden" data-error="whRep"></span>
               </div>
             </div>
@@ -69,22 +71,22 @@
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label" for="labor-cost">Labor Cost ($)</label>
-                  <input type="number" id="labor-cost" class="form-control" data-field="laborCost" value="0" min="0" step="0.01" />
+                  <input type="number" id="labor-cost" class="form-control" data-field="laborCost" placeholder="0.00" min="0" step="0.01" />
                   <span class="form-error hidden" data-error="laborCost"></span>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="park-cost">Parking Cost ($)</label>
-                  <input type="number" id="park-cost" class="form-control" data-field="parkCost" value="0" min="0" step="0.01" />
+                  <input type="number" id="park-cost" class="form-control" data-field="parkCost" placeholder="0.00" min="0" step="0.01" />
                   <span class="form-error hidden" data-error="parkCost"></span>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="truck-cost">Truck Cost ($)</label>
-                  <input type="number" id="truck-cost" class="form-control" data-field="truckCost" value="0" min="0" step="0.01" />
+                  <input type="number" id="truck-cost" class="form-control" data-field="truckCost" placeholder="0.00" min="0" step="0.01" />
                   <span class="form-error hidden" data-error="truckCost"></span>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="hotel-cost">Hotel Cost ($)</label>
-                  <input type="number" id="hotel-cost" class="form-control" data-field="hotelCost" value="0" min="0" step="0.01" />
+                  <input type="number" id="hotel-cost" class="form-control" data-field="hotelCost" placeholder="0.00" min="0" step="0.01" />
                   <span class="form-error hidden" data-error="hotelCost"></span>
                 </div>
               </div>

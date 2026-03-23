@@ -2,6 +2,7 @@
  * pages/fleet/edit-trip.js
  * ────────────────────────
  * Edit an existing trip. Reads tripId from query string.
+ * WH Rep and coordinator dropdowns are loaded from the API on page load.
  */
 
 (async function () {
@@ -13,10 +14,14 @@
   const deleteBtn     = document.getElementById('delete-btn');
   const formErrorEl   = document.getElementById('form-error');
   const sitesContainer= document.getElementById('sites-container');
+  const whRepSelect   = document.getElementById('wh-rep');
 
-  function hideLoading() {
-    loadingEl?.remove();
-  }
+  const FALLBACK_WH_REPS = [
+    { value: 'Ehab',  label: 'Ehab' },
+    { value: 'Karam', label: 'Karam' },
+  ];
+
+  function hideLoading() { loadingEl?.remove(); }
 
   function showPageError(msg) {
     hideLoading();
@@ -49,13 +54,15 @@
     return;
   }
 
-  let currentSites = [];
   let siteCount    = 0;
+  let coordinators = [];
 
   try {
-    const [tripResult, sitesResult] = await Promise.all([
-      fetchAPI(ACTIONS.GET_TRIPS, { tripId }),
+    const [tripResult, sitesResult, whRepsResult, coordResult] = await Promise.all([
+      fetchAPI(ACTIONS.GET_TRIPS,         { tripId }),
       fetchAPI(ACTIONS.GET_SITES_BY_TRIP, { tripId }),
+      fetchAPI(ACTIONS.GET_LIST,          { listName: 'whRep' }),
+      fetchAPI(ACTIONS.GET_COORDINATORS,  {}),
     ]);
     clearTimeout(loadingTimeout);
 
@@ -64,7 +71,7 @@
       return;
     }
 
-    const trips = tripResult.data || [];
+    const trips = tripResult.data  || [];
     const sites = sitesResult.data || [];
     const trip  = trips.find(t => t.tripId === tripId) || trips[0];
 
@@ -73,20 +80,39 @@
       return;
     }
 
-    currentSites = sites;
+    // Populate WH rep dropdown
+    const whReps = (whRepsResult.success && whRepsResult.data && whRepsResult.data.length)
+      ? whRepsResult.data
+      : FALLBACK_WH_REPS;
+
+    whRepSelect.innerHTML =
+      '<option value="">Select WH Rep…</option>' +
+      whReps.map(o => {
+        const val = escapeHtml(String(o.value || o.label));
+        const lbl = escapeHtml(String(o.label || o.value));
+        const selected = (o.value === trip.whRep || o.label === trip.whRep) ? 'selected' : '';
+        return `<option value="${val}" ${selected}>${lbl}</option>`;
+      }).join('');
+
+    // If the stored value isn't in the list, add it so it stays selected
+    if (trip.whRep && !whReps.some(o => o.value === trip.whRep || o.label === trip.whRep)) {
+      whRepSelect.innerHTML += `<option value="${escapeHtml(trip.whRep)}" selected>${escapeHtml(trip.whRep)}</option>`;
+    }
+
+    coordinators = (coordResult.success && coordResult.data) ? coordResult.data : [];
+
     hideLoading();
     formSection.classList.remove('hidden');
 
     // Populate trip fields
     document.getElementById('trip-id-label').textContent = tripId;
-    document.getElementById('trip-date').value   = trip.date     || '';
-    document.getElementById('wh-rep').value      = trip.whRep    || '';
-    document.getElementById('driver').value      = trip.driver   || '';
-    document.getElementById('route').value       = trip.route    || '';
-    document.getElementById('labor-cost').value  = trip.laborCost|| 0;
-    document.getElementById('park-cost').value   = trip.parkCost || 0;
-    document.getElementById('truck-cost').value  = trip.truckCost|| 0;
-    document.getElementById('hotel-cost').value  = trip.hotelCost|| 0;
+    document.getElementById('trip-date').value   = trip.date      || '';
+    document.getElementById('driver').value      = trip.driver    || '';
+    document.getElementById('route').value       = trip.route     || '';
+    document.getElementById('labor-cost').value  = trip.laborCost || '';
+    document.getElementById('park-cost').value   = trip.parkCost  || '';
+    document.getElementById('truck-cost').value  = trip.truckCost || '';
+    document.getElementById('hotel-cost').value  = trip.hotelCost || '';
 
     // Populate site entries
     sites.forEach(s => addSiteEntry(s));
@@ -100,6 +126,16 @@
   }
 
   document.getElementById('add-site-btn').addEventListener('click', () => addSiteEntry());
+
+  function buildCoordinatorSelect(selectedEmail) {
+    if (!coordinators.length) {
+      return `<input type="email" class="form-control" name="coordinatorEmail" placeholder="coordinator@example.com" value="${escapeHtml(selectedEmail || '')}" />`;
+    }
+    const options = coordinators.map(c =>
+      `<option value="${escapeHtml(c.email)}" ${c.email === selectedEmail ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+    ).join('');
+    return `<select class="form-control" name="coordinatorEmail"><option value="">Select coordinator…</option>${options}</select>`;
+  }
 
   function addSiteEntry(site = null) {
     siteCount++;
@@ -120,8 +156,8 @@
           <input type="text" class="form-control" name="siteNumber" value="${escapeHtml(site?.siteNumber || '')}" placeholder="e.g. SITE-042" />
         </div>
         <div class="form-group">
-          <label class="form-label">Coordinator Email <span class="required">*</span></label>
-          <input type="email" class="form-control" name="coordinatorEmail" value="${escapeHtml(site?.coordinatorEmail || '')}" placeholder="coordinator@example.com" />
+          <label class="form-label">Coordinator <span class="required">*</span></label>
+          ${buildCoordinatorSelect(site?.coordinatorEmail || '')}
         </div>
       </div>
     `;
@@ -171,7 +207,7 @@
     return {
       trip: {
         date:      document.getElementById('trip-date').value,
-        whRep:     document.getElementById('wh-rep').value.trim(),
+        whRep:     whRepSelect.value,
         driver:    document.getElementById('driver').value.trim(),
         route:     document.getElementById('route').value.trim(),
         laborCost: Number(document.getElementById('labor-cost').value) || 0,

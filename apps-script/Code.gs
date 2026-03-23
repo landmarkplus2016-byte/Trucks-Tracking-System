@@ -12,6 +12,7 @@ var TABS = {
   SITES:         'Sites',
   USERS:         'Users',
   NOTIFICATIONS: 'Notifications',
+  LISTS:         'Lists',
 };
 
 /**
@@ -60,6 +61,12 @@ function doPost(e) {
         return jsonResponse(getUnreadNotifications(data));
       case 'markNotifRead':
         return jsonResponse(markNotifRead(data));
+
+      // Lists
+      case 'getList':
+        return jsonResponse(getList(data));
+      case 'getCoordinators':
+        return jsonResponse(getCoordinators(data));
 
       default:
         return jsonResponse({ success: false, error: 'Unknown action: ' + action });
@@ -120,6 +127,12 @@ function doGet(e) {
         return jsonResponse(getUnreadNotifications(data));
       case 'markNotifRead':
         return jsonResponse(markNotifRead(data));
+
+      // Lists
+      case 'getList':
+        return jsonResponse(getList(data));
+      case 'getCoordinators':
+        return jsonResponse(getCoordinators(data));
 
       default:
         return jsonResponse({ success: false, error: 'Unknown action: ' + action });
