@@ -17,14 +17,24 @@
 
   let allTrips = [];
 
+  function showError(msg) {
+    loadingEl.classList.add('hidden');
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+  }
+
+  const timeoutId = setTimeout(() => {
+    showError('Could not reach the server. Please check your connection.');
+  }, 10000);
+
   try {
     allTrips = await getTrips({ email: user.email, role: ROLES.PROJECT });
+    clearTimeout(timeoutId);
     loadingEl.classList.add('hidden');
     renderTable(allTrips);
   } catch (err) {
-    loadingEl.classList.add('hidden');
-    errorEl.textContent = err.message || 'Failed to load history.';
-    errorEl.classList.remove('hidden');
+    clearTimeout(timeoutId);
+    showError('Could not load trip history. Please refresh the page.');
   }
 
   [filterDate, filterStatus].forEach(el => el?.addEventListener('input', applyFilters));
@@ -42,7 +52,10 @@
 
   function renderTable(trips) {
     if (!trips.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No trips found.</td></tr>';
+      const msg = allTrips.length === 0
+        ? 'No trip history found.'
+        : 'No trips match your filters.';
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${msg}</td></tr>`;
       return;
     }
     const sorted = [...trips].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -70,7 +83,7 @@
   }
 
   window.toggleDetail = async function (btn, tripId) {
-    const detailRow = document.getElementById(`detail-${tripId}`);
+    const detailRow   = document.getElementById(`detail-${tripId}`);
     const breakdownEl = document.getElementById(`breakdown-${tripId}`);
     const isOpen = !detailRow.classList.contains('hidden');
 
@@ -83,8 +96,13 @@
     detailRow.classList.remove('hidden');
     btn.textContent = 'Hide ▾';
 
+    const detailTimeoutId = setTimeout(() => {
+      breakdownEl.innerHTML = `<span class="text-danger">Could not reach the server. Please check your connection.</span>`;
+    }, 10000);
+
     try {
       const sites = await getSitesByTrip(tripId);
+      clearTimeout(detailTimeoutId);
       const trip  = allTrips.find(t => t.tripId === tripId);
       if (!trip) return;
       const breakdown = buildCostBreakdown(trip, sites);
@@ -94,6 +112,7 @@
       breakdown.hotelCost  = trip.hotelCost;
       renderCostSummary(breakdownEl, breakdown);
     } catch (err) {
+      clearTimeout(detailTimeoutId);
       breakdownEl.innerHTML = `<span class="text-danger">${escapeHtml(err.message || 'Failed to load breakdown.')}</span>`;
     }
   };

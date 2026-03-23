@@ -9,17 +9,29 @@
   renderNavbar(ROUTES.PROJECT_PENDING_JC);
   initNotificationBell();
 
-  const loadingEl   = document.getElementById('loading');
-  const errorEl     = document.getElementById('page-error');
-  const contentEl   = document.getElementById('pending-content');
-  const emptyEl     = document.getElementById('empty-state');
+  const loadingEl = document.getElementById('loading');
+  const errorEl   = document.getElementById('page-error');
+  const contentEl = document.getElementById('pending-content');
+  const emptyEl   = document.getElementById('empty-state');
+
+  function showError(msg) {
+    loadingEl.classList.add('hidden');
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+  }
+
+  const timeoutId = setTimeout(() => {
+    showError('Could not reach the server. Please check your connection.');
+  }, 10000);
 
   try {
     // Get trips where this coordinator has pending sites
     const trips = await getTrips({ email: user.email, role: ROLES.PROJECT, jcStatus: JC_STATUS.PENDING });
+    clearTimeout(timeoutId);
     loadingEl.classList.add('hidden');
 
     if (!trips.length) {
+      emptyEl.textContent = 'No pending job codes. All your sites are up to date.';
       emptyEl.classList.remove('hidden');
       return;
     }
@@ -79,8 +91,7 @@
     }
 
   } catch (err) {
-    loadingEl.classList.add('hidden');
-    errorEl.textContent = err.message || 'Failed to load pending trips.';
-    errorEl.classList.remove('hidden');
+    clearTimeout(timeoutId);
+    showError('Could not load pending items. Please refresh the page.');
   }
 })();

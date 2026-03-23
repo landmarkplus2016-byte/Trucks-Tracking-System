@@ -21,15 +21,23 @@
   const formErrorEl   = document.getElementById('form-error');
   const sitesContainer= document.getElementById('sites-container');
 
-  if (!tripId) {
-    errorEl.textContent = 'No trip ID specified.';
-    errorEl.classList.remove('hidden');
+  function showPageError(msg) {
     loadingEl.classList.add('hidden');
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+  }
+
+  if (!tripId) {
+    showPageError('No trip ID specified.');
     return;
   }
 
   let currentSites = [];
   let siteCount    = 0;
+
+  const loadTimeoutId = setTimeout(() => {
+    showPageError('Could not reach the server. Please check your connection.');
+  }, 10000);
 
   try {
     // Load trip + sites in parallel
@@ -37,6 +45,7 @@
       getTrips({ tripId }),
       getSitesByTrip(tripId),
     ]);
+    clearTimeout(loadTimeoutId);
 
     const trip = trips.find(t => t.tripId === tripId) || trips[0];
     if (!trip) throw new Error('Trip not found.');
@@ -62,9 +71,8 @@
 
     updateCostPreview();
   } catch (err) {
-    loadingEl.classList.add('hidden');
-    errorEl.textContent = err.message || 'Failed to load trip.';
-    errorEl.classList.remove('hidden');
+    clearTimeout(loadTimeoutId);
+    showPageError('Could not load trip details. Please go back and try again.');
     return;
   }
 
@@ -167,11 +175,20 @@
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner"></span> Saving…';
 
+    const saveTimeoutId = setTimeout(() => {
+      formErrorEl.textContent = 'Could not reach the server. Please check your connection.';
+      formErrorEl.classList.remove('hidden');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Save Changes';
+    }, 10000);
+
     try {
       await updateTrip(tripId, payload);
+      clearTimeout(saveTimeoutId);
       window.location.href = 'dashboard.html';
     } catch (err) {
-      formErrorEl.textContent = err.message || 'Failed to save changes.';
+      clearTimeout(saveTimeoutId);
+      formErrorEl.textContent = 'Could not save changes. Please try again.';
       formErrorEl.classList.remove('hidden');
       submitBtn.disabled = false;
       submitBtn.innerHTML = 'Save Changes';
@@ -190,10 +207,18 @@
     deleteBtn.disabled = true;
     deleteBtn.innerHTML = '<span class="spinner"></span>';
 
+    const deleteTimeoutId = setTimeout(() => {
+      showAlert({ title: 'Error', message: 'Could not reach the server. Please check your connection.' });
+      deleteBtn.disabled = false;
+      deleteBtn.textContent = 'Delete Trip';
+    }, 10000);
+
     try {
       await deleteTrip(tripId);
+      clearTimeout(deleteTimeoutId);
       window.location.href = 'dashboard.html';
     } catch (err) {
+      clearTimeout(deleteTimeoutId);
       await showAlert({ title: 'Error', message: err.message || 'Failed to delete trip.' });
       deleteBtn.disabled = false;
       deleteBtn.textContent = 'Delete Trip';

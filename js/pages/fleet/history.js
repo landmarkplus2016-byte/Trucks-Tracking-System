@@ -9,23 +9,33 @@
   renderNavbar(ROUTES.FLEET_HISTORY);
   initNotificationBell();
 
-  const tbody    = document.getElementById('history-tbody');
-  const loadingEl= document.getElementById('loading');
-  const errorEl  = document.getElementById('page-error');
+  const tbody        = document.getElementById('history-tbody');
+  const loadingEl    = document.getElementById('loading');
+  const errorEl      = document.getElementById('page-error');
   const filterDate   = document.getElementById('filter-date');
   const filterStatus = document.getElementById('filter-status');
   const filterSearch = document.getElementById('filter-search');
 
   let allTrips = [];
 
+  function showError(msg) {
+    loadingEl.classList.add('hidden');
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+  }
+
+  const timeoutId = setTimeout(() => {
+    showError('Could not reach the server. Please check your connection.');
+  }, 10000);
+
   try {
     allTrips = await getTrips({ email: user.email });
+    clearTimeout(timeoutId);
     loadingEl.classList.add('hidden');
     renderTable(allTrips);
   } catch (err) {
-    loadingEl.classList.add('hidden');
-    errorEl.textContent = err.message || 'Failed to load history.';
-    errorEl.classList.remove('hidden');
+    clearTimeout(timeoutId);
+    showError('Could not load trip history. Please refresh the page.');
   }
 
   [filterDate, filterStatus, filterSearch].forEach(el => {
@@ -38,8 +48,8 @@
     const search = (filterSearch?.value || '').toLowerCase();
 
     const filtered = allTrips.filter(t => {
-      if (date   && !t.date?.startsWith(date))              return false;
-      if (status && t.status !== status)                    return false;
+      if (date   && !t.date?.startsWith(date))                          return false;
+      if (status && t.status !== status)                                return false;
       if (search && !JSON.stringify(t).toLowerCase().includes(search)) return false;
       return true;
     });
@@ -48,7 +58,10 @@
 
   function renderTable(trips) {
     if (!trips.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No trips match your filters.</td></tr>';
+      const msg = allTrips.length === 0
+        ? 'No trip history found.'
+        : 'No trips match your filters.';
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">${msg}</td></tr>`;
       return;
     }
     const sorted = [...trips].sort((a, b) => new Date(b.date) - new Date(a.date));

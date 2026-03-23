@@ -14,9 +14,19 @@
   const loadingEl     = document.getElementById('loading');
   const errorEl       = document.getElementById('page-error');
 
+  function showError(msg) {
+    loadingEl.classList.add('hidden');
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+  }
+
+  const timeoutId = setTimeout(() => {
+    showError('Could not reach the server. Please check your connection.');
+  }, 10000);
+
   try {
     const trips = await getTrips({ email: user.email });
-
+    clearTimeout(timeoutId);
     loadingEl.classList.add('hidden');
 
     // Stats
@@ -43,7 +53,7 @@
     const recent = [...trips].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
 
     if (recent.length === 0) {
-      recentTableEl.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No trips yet. <a href="new-trip.html" class="text-primary">Create the first one</a>.</td></tr>`;
+      recentTableEl.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No trips yet. Click '+ New Trip' to create your first trip.</td></tr>`;
     } else {
       recentTableEl.innerHTML = recent.map(t => `
         <tr>
@@ -65,8 +75,7 @@
     }
 
   } catch (err) {
-    loadingEl.classList.add('hidden');
-    errorEl.textContent = err.message || 'Failed to load dashboard.';
-    errorEl.classList.remove('hidden');
+    clearTimeout(timeoutId);
+    showError('Could not load trips. Please refresh the page.');
   }
 })();

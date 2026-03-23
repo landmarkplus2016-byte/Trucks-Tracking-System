@@ -15,12 +15,26 @@
   const bannerEl   = document.getElementById('pending-banner');
   const bannerNumEl= document.getElementById('pending-banner-count');
 
+  function showError(msg) {
+    loadingEl.classList.add('hidden');
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+  }
+
+  const timeoutId = setTimeout(() => {
+    showError('Could not reach the server. Please check your connection.');
+  }, 10000);
+
   try {
     const trips = await getTrips({ email: user.email, role: ROLES.PROJECT });
+    clearTimeout(timeoutId);
     loadingEl.classList.add('hidden');
 
-    // We need sites to know which have pending JCs
-    // For dashboard simplicity, count trips where status !== complete
+    if (!trips.length) {
+      statsEl.innerHTML = `<p class="text-muted">No trips assigned to you yet. You will be notified when a fleet coordinator assigns sites to you.</p>`;
+      return;
+    }
+
     const totalTrips  = trips.length;
     const pendingTrips= trips.filter(t => t.status !== TRIP_STATUS.COMPLETE).length;
     const totalCost   = trips.reduce((s, t) => s + (Number(t.totalCost) || 0), 0);
@@ -45,8 +59,7 @@
       </div>
     `;
   } catch (err) {
-    loadingEl.classList.add('hidden');
-    errorEl.textContent = err.message || 'Failed to load dashboard.';
-    errorEl.classList.remove('hidden');
+    clearTimeout(timeoutId);
+    showError('Could not load your dashboard. Please refresh the page.');
   }
 })();
