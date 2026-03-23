@@ -74,7 +74,7 @@ function requireAuth() {
  */
 function requireRole(requiredRole) {
   const user = requireAuth();
-  if (user.role !== requiredRole) {
+  if (user.role?.toLowerCase() !== requiredRole?.toLowerCase()) {
     // Send each role to their own home
     const home = 'dashboard.html';
     window.location.href = home;
