@@ -34,14 +34,14 @@ const SHEET_TABS = Object.freeze({
 
 /** Client-side page routes (relative paths from repo root) */
 const ROUTES = Object.freeze({
-  LOGIN:              '/index.html',
-  FLEET_DASHBOARD:    '/pages/fleet/dashboard.html',
-  FLEET_NEW_TRIP:     '/pages/fleet/new-trip.html',
-  FLEET_EDIT_TRIP:    '/pages/fleet/edit-trip.html',
-  FLEET_HISTORY:      '/pages/fleet/history.html',
-  PROJECT_DASHBOARD:  '/pages/project/dashboard.html',
-  PROJECT_PENDING_JC: '/pages/project/pending-jc.html',
-  PROJECT_HISTORY:    '/pages/project/history.html',
+  LOGIN:              'index.html',
+  FLEET_DASHBOARD:    'pages/fleet/dashboard.html',
+  FLEET_NEW_TRIP:     'pages/fleet/new-trip.html',
+  FLEET_EDIT_TRIP:    'pages/fleet/edit-trip.html',
+  FLEET_HISTORY:      'pages/fleet/history.html',
+  PROJECT_DASHBOARD:  'pages/project/dashboard.html',
+  PROJECT_PENDING_JC: 'pages/project/pending-jc.html',
+  PROJECT_HISTORY:    'pages/project/history.html',
 });
 
 /** Apps Script action names (must match doPost switch cases in Code.gs) */
