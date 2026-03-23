@@ -30,7 +30,7 @@
     user = requireRole(ROLES.PROJECT);
   } catch (err) {
     clearTimeout(loadingTimeout);
-    showError('Could not reach the server. Please refresh the page.');
+    window.location.href = '../../index.html';
     return;
   }
 

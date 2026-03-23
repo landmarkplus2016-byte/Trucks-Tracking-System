@@ -29,7 +29,7 @@
     user = requireRole(ROLES.PROJECT);
   } catch (err) {
     clearTimeout(loadingTimeout);
-    showError('Could not reach the server. Please refresh the page.');
+    window.location.href = '../../index.html';
     return;
   }
 
@@ -67,8 +67,12 @@
         const sitesResult = await fetchAPI(ACTIONS.GET_SITES_BY_TRIP, { tripId: trip.tripId });
         if (sitesResult.success) {
           const allSites = sitesResult.data || [];
-          // Only show this coordinator's sites
-          sites = allSites.filter(s => s.coordinatorEmail === user.email && s.jcStatus === JC_STATUS.PENDING);
+          // Only show this coordinator's sites (case-insensitive email match)
+          const myEmail = user.email.toLowerCase();
+          sites = allSites.filter(s =>
+            String(s.coordinatorEmail || '').toLowerCase() === myEmail &&
+            s.jcStatus === JC_STATUS.PENDING
+          );
         }
       } catch { /* skip this trip */ }
 
