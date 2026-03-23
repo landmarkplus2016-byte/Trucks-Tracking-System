@@ -5,30 +5,52 @@
  */
 
 (async function () {
-  const user = requireRole(ROLES.PROJECT);
-  renderNavbar(ROUTES.PROJECT_PENDING_JC);
-  initNotificationBell();
-
   const loadingEl = document.getElementById('loading');
   const errorEl   = document.getElementById('page-error');
   const contentEl = document.getElementById('pending-content');
   const emptyEl   = document.getElementById('empty-state');
 
+  function hideLoading() {
+    loadingEl?.remove();
+  }
+
   function showError(msg) {
-    loadingEl.classList.add('hidden');
+    hideLoading();
     errorEl.textContent = msg;
     errorEl.classList.remove('hidden');
   }
 
-  const timeoutId = setTimeout(() => {
-    showError('Could not reach the server. Please check your connection.');
+  const loadingTimeout = setTimeout(() => {
+    showError('Could not reach the server. Please refresh the page.');
   }, 10000);
 
+  let user;
   try {
-    // Get trips where this coordinator has pending sites
-    const trips = await getTrips({ email: user.email, role: ROLES.PROJECT, jcStatus: JC_STATUS.PENDING });
-    clearTimeout(timeoutId);
-    loadingEl.classList.add('hidden');
+    user = requireRole(ROLES.PROJECT);
+  } catch (err) {
+    clearTimeout(loadingTimeout);
+    showError('Could not reach the server. Please refresh the page.');
+    return;
+  }
+
+  renderNavbar(ROUTES.PROJECT_PENDING_JC);
+  initNotificationBell();
+
+  try {
+    const result = await fetchAPI(ACTIONS.GET_TRIPS, {
+      email: user.email,
+      role: ROLES.PROJECT,
+      jcStatus: JC_STATUS.PENDING,
+    });
+    clearTimeout(loadingTimeout);
+
+    if (!result.success) {
+      showError('Something went wrong. Please refresh the page or contact your administrator.');
+      return;
+    }
+
+    hideLoading();
+    const trips = result.data || [];
 
     if (!trips.length) {
       emptyEl.textContent = 'No pending job codes. All your sites are up to date.';
@@ -42,10 +64,13 @@
     for (const trip of trips) {
       let sites = [];
       try {
-        const allSites = await getSitesByTrip(trip.tripId);
-        // Only show this coordinator's sites
-        sites = allSites.filter(s => s.coordinatorEmail === user.email && s.jcStatus === JC_STATUS.PENDING);
-      } catch { /* skip */ }
+        const sitesResult = await fetchAPI(ACTIONS.GET_SITES_BY_TRIP, { tripId: trip.tripId });
+        if (sitesResult.success) {
+          const allSites = sitesResult.data || [];
+          // Only show this coordinator's sites
+          sites = allSites.filter(s => s.coordinatorEmail === user.email && s.jcStatus === JC_STATUS.PENDING);
+        }
+      } catch { /* skip this trip */ }
 
       if (!sites.length) continue;
 
@@ -91,7 +116,7 @@
     }
 
   } catch (err) {
-    clearTimeout(timeoutId);
-    showError('Could not load pending items. Please refresh the page.');
+    clearTimeout(loadingTimeout);
+    showError('Something went wrong. Please refresh the page or contact your administrator.');
   }
 })();

@@ -13,6 +13,7 @@
 async function login(email, password) {
   const result = await fetchAPI(ACTIONS.LOGIN, { email, password });
   if (result.success && result.data) {
+    result.data.role = String(result.data.role || '').toLowerCase().trim();
     saveUserToSession(result.data);
   }
   return result;

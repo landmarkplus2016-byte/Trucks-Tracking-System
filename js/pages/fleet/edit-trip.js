@@ -5,13 +5,6 @@
  */
 
 (async function () {
-  const user = requireRole(ROLES.FLEET);
-  renderNavbar(ROUTES.FLEET_EDIT_TRIP);
-  initNotificationBell();
-
-  const params  = new URLSearchParams(window.location.search);
-  const tripId  = params.get('tripId');
-
   const loadingEl     = document.getElementById('loading');
   const errorEl       = document.getElementById('page-error');
   const formSection   = document.getElementById('form-section');
@@ -21,13 +14,37 @@
   const formErrorEl   = document.getElementById('form-error');
   const sitesContainer= document.getElementById('sites-container');
 
+  function hideLoading() {
+    loadingEl?.remove();
+  }
+
   function showPageError(msg) {
-    loadingEl.classList.add('hidden');
+    hideLoading();
     errorEl.textContent = msg;
     errorEl.classList.remove('hidden');
   }
 
+  const loadingTimeout = setTimeout(() => {
+    showPageError('Could not reach the server. Please refresh the page.');
+  }, 10000);
+
+  let user;
+  try {
+    user = requireRole(ROLES.FLEET);
+  } catch (err) {
+    clearTimeout(loadingTimeout);
+    showPageError('Could not reach the server. Please refresh the page.');
+    return;
+  }
+
+  renderNavbar(ROUTES.FLEET_EDIT_TRIP);
+  initNotificationBell();
+
+  const params = new URLSearchParams(window.location.search);
+  const tripId = params.get('tripId');
+
   if (!tripId) {
+    clearTimeout(loadingTimeout);
     showPageError('No trip ID specified.');
     return;
   }
@@ -35,23 +52,29 @@
   let currentSites = [];
   let siteCount    = 0;
 
-  const loadTimeoutId = setTimeout(() => {
-    showPageError('Could not reach the server. Please check your connection.');
-  }, 10000);
-
   try {
-    // Load trip + sites in parallel
-    const [trips, sites] = await Promise.all([
-      getTrips({ tripId }),
-      getSitesByTrip(tripId),
+    const [tripResult, sitesResult] = await Promise.all([
+      fetchAPI(ACTIONS.GET_TRIPS, { tripId }),
+      fetchAPI(ACTIONS.GET_SITES_BY_TRIP, { tripId }),
     ]);
-    clearTimeout(loadTimeoutId);
+    clearTimeout(loadingTimeout);
 
-    const trip = trips.find(t => t.tripId === tripId) || trips[0];
-    if (!trip) throw new Error('Trip not found.');
+    if (!tripResult.success || !sitesResult.success) {
+      showPageError('Something went wrong. Please refresh the page or contact your administrator.');
+      return;
+    }
+
+    const trips = tripResult.data || [];
+    const sites = sitesResult.data || [];
+    const trip  = trips.find(t => t.tripId === tripId) || trips[0];
+
+    if (!trip) {
+      showPageError('Could not load trip details. Please go back and try again.');
+      return;
+    }
 
     currentSites = sites;
-    loadingEl.classList.add('hidden');
+    hideLoading();
     formSection.classList.remove('hidden');
 
     // Populate trip fields
@@ -71,7 +94,7 @@
 
     updateCostPreview();
   } catch (err) {
-    clearTimeout(loadTimeoutId);
+    clearTimeout(loadingTimeout);
     showPageError('Could not load trip details. Please go back and try again.');
     return;
   }

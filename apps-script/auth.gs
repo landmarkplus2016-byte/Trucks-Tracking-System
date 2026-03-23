@@ -33,6 +33,17 @@ function validateUser(data) {
     return { success: false, error: 'Invalid email or password.' };
   }
 
+  // Normalize role — map any variation to 'fleet' or 'project'
+  var rawRole = String(user.role || '').toLowerCase().trim();
+  var role;
+  if (rawRole === 'fleet' || rawRole === 'fleet coordinator' || rawRole === 'fleet coord' || rawRole === 'fc') {
+    role = 'fleet';
+  } else if (rawRole === 'project' || rawRole === 'project coordinator' || rawRole === 'project coord' || rawRole === 'pc' || rawRole === 'coordinator') {
+    role = 'project';
+  } else {
+    role = rawRole; // pass through unknown roles as-is
+  }
+
   // Return user without the password field
   return {
     success: true,
@@ -40,7 +51,7 @@ function validateUser(data) {
       userId: user.userId,
       name:   user.name,
       email:  user.email,
-      role:   user.role,
+      role:   role,
     },
   };
 }
@@ -55,5 +66,9 @@ function getUserRole(email) {
   var user  = users.find(function (u) {
     return String(u.email || '').trim().toLowerCase() === String(email || '').trim().toLowerCase();
   });
-  return user ? user.role : null;
+  if (!user) return null;
+  var rawRole = String(user.role || '').toLowerCase().trim();
+  if (rawRole === 'fleet' || rawRole === 'fleet coordinator' || rawRole === 'fleet coord' || rawRole === 'fc') return 'fleet';
+  if (rawRole === 'project' || rawRole === 'project coordinator' || rawRole === 'project coord' || rawRole === 'pc' || rawRole === 'coordinator') return 'project';
+  return rawRole;
 }

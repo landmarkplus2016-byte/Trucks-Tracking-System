@@ -5,10 +5,6 @@
  */
 
 (async function () {
-  const user = requireRole(ROLES.PROJECT);
-  renderNavbar(ROUTES.PROJECT_HISTORY);
-  initNotificationBell();
-
   const loadingEl    = document.getElementById('loading');
   const errorEl      = document.getElementById('page-error');
   const tbody        = document.getElementById('history-tbody');
@@ -17,24 +13,47 @@
 
   let allTrips = [];
 
+  function hideLoading() {
+    loadingEl?.remove();
+  }
+
   function showError(msg) {
-    loadingEl.classList.add('hidden');
+    hideLoading();
     errorEl.textContent = msg;
     errorEl.classList.remove('hidden');
   }
 
-  const timeoutId = setTimeout(() => {
-    showError('Could not reach the server. Please check your connection.');
+  const loadingTimeout = setTimeout(() => {
+    showError('Could not reach the server. Please refresh the page.');
   }, 10000);
 
+  let user;
   try {
-    allTrips = await getTrips({ email: user.email, role: ROLES.PROJECT });
-    clearTimeout(timeoutId);
-    loadingEl.classList.add('hidden');
+    user = requireRole(ROLES.PROJECT);
+  } catch (err) {
+    clearTimeout(loadingTimeout);
+    showError('Could not reach the server. Please refresh the page.');
+    return;
+  }
+
+  renderNavbar(ROUTES.PROJECT_HISTORY);
+  initNotificationBell();
+
+  try {
+    const result = await fetchAPI(ACTIONS.GET_TRIPS, { email: user.email, role: ROLES.PROJECT });
+    clearTimeout(loadingTimeout);
+
+    if (!result.success) {
+      showError('Something went wrong. Please refresh the page or contact your administrator.');
+      return;
+    }
+
+    hideLoading();
+    allTrips = result.data || [];
     renderTable(allTrips);
   } catch (err) {
-    clearTimeout(timeoutId);
-    showError('Could not load trip history. Please refresh the page.');
+    clearTimeout(loadingTimeout);
+    showError('Something went wrong. Please refresh the page or contact your administrator.');
   }
 
   [filterDate, filterStatus].forEach(el => el?.addEventListener('input', applyFilters));
@@ -101,8 +120,15 @@
     }, 10000);
 
     try {
-      const sites = await getSitesByTrip(tripId);
+      const result = await fetchAPI(ACTIONS.GET_SITES_BY_TRIP, { tripId });
       clearTimeout(detailTimeoutId);
+
+      if (!result.success) {
+        breakdownEl.innerHTML = `<span class="text-danger">Something went wrong loading the breakdown.</span>`;
+        return;
+      }
+
+      const sites = result.data || [];
       const trip  = allTrips.find(t => t.tripId === tripId);
       if (!trip) return;
       const breakdown = buildCostBreakdown(trip, sites);

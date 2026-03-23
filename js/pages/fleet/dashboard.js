@@ -5,29 +5,48 @@
  */
 
 (async function () {
-  const user = requireRole(ROLES.FLEET);
-  renderNavbar(ROUTES.FLEET_DASHBOARD);
-  initNotificationBell();
-
   const statsEl       = document.getElementById('dashboard-stats');
   const recentTableEl = document.getElementById('recent-trips-tbody');
   const loadingEl     = document.getElementById('loading');
   const errorEl       = document.getElementById('page-error');
 
+  function hideLoading() {
+    loadingEl?.remove();
+  }
+
   function showError(msg) {
-    loadingEl.classList.add('hidden');
+    hideLoading();
     errorEl.textContent = msg;
     errorEl.classList.remove('hidden');
   }
 
-  const timeoutId = setTimeout(() => {
-    showError('Could not reach the server. Please check your connection.');
+  const loadingTimeout = setTimeout(() => {
+    showError('Could not reach the server. Please refresh the page.');
   }, 10000);
 
+  let user;
   try {
-    const trips = await getTrips({ email: user.email });
-    clearTimeout(timeoutId);
-    loadingEl.classList.add('hidden');
+    user = requireRole(ROLES.FLEET);
+  } catch (err) {
+    clearTimeout(loadingTimeout);
+    showError('Could not reach the server. Please refresh the page.');
+    return;
+  }
+
+  renderNavbar(ROUTES.FLEET_DASHBOARD);
+  initNotificationBell();
+
+  try {
+    const result = await fetchAPI(ACTIONS.GET_TRIPS, { email: user.email });
+    clearTimeout(loadingTimeout);
+
+    if (!result.success) {
+      showError('Something went wrong. Please refresh the page or contact your administrator.');
+      return;
+    }
+
+    hideLoading();
+    const trips = result.data || [];
 
     // Stats
     const totalTrips = trips.length;
@@ -53,7 +72,7 @@
     const recent = [...trips].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
 
     if (recent.length === 0) {
-      recentTableEl.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No trips yet. Click '+ New Trip' to create your first trip.</td></tr>`;
+      recentTableEl.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No trips yet. Click + New Trip to create your first trip.</td></tr>`;
     } else {
       recentTableEl.innerHTML = recent.map(t => `
         <tr>
@@ -75,7 +94,7 @@
     }
 
   } catch (err) {
-    clearTimeout(timeoutId);
-    showError('Could not load trips. Please refresh the page.');
+    clearTimeout(loadingTimeout);
+    showError('Something went wrong. Please refresh the page or contact your administrator.');
   }
 })();

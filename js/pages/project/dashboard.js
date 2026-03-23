@@ -5,33 +5,52 @@
  */
 
 (async function () {
-  const user = requireRole(ROLES.PROJECT);
-  renderNavbar(ROUTES.PROJECT_DASHBOARD);
-  initNotificationBell();
-
   const loadingEl  = document.getElementById('loading');
   const errorEl    = document.getElementById('page-error');
   const statsEl    = document.getElementById('coordinator-stats');
   const bannerEl   = document.getElementById('pending-banner');
   const bannerNumEl= document.getElementById('pending-banner-count');
 
+  function hideLoading() {
+    loadingEl?.remove();
+  }
+
   function showError(msg) {
-    loadingEl.classList.add('hidden');
+    hideLoading();
     errorEl.textContent = msg;
     errorEl.classList.remove('hidden');
   }
 
-  const timeoutId = setTimeout(() => {
-    showError('Could not reach the server. Please check your connection.');
+  const loadingTimeout = setTimeout(() => {
+    showError('Could not reach the server. Please refresh the page.');
   }, 10000);
 
+  let user;
   try {
-    const trips = await getTrips({ email: user.email, role: ROLES.PROJECT });
-    clearTimeout(timeoutId);
-    loadingEl.classList.add('hidden');
+    user = requireRole(ROLES.PROJECT);
+  } catch (err) {
+    clearTimeout(loadingTimeout);
+    showError('Could not reach the server. Please refresh the page.');
+    return;
+  }
+
+  renderNavbar(ROUTES.PROJECT_DASHBOARD);
+  initNotificationBell();
+
+  try {
+    const result = await fetchAPI(ACTIONS.GET_TRIPS, { email: user.email, role: ROLES.PROJECT });
+    clearTimeout(loadingTimeout);
+
+    if (!result.success) {
+      showError('Something went wrong. Please refresh the page or contact your administrator.');
+      return;
+    }
+
+    hideLoading();
+    const trips = result.data || [];
 
     if (!trips.length) {
-      statsEl.innerHTML = `<p class="text-muted">No trips assigned to you yet. You will be notified when a fleet coordinator assigns sites to you.</p>`;
+      statsEl.innerHTML = `<p class="text-muted">No trips assigned to you yet. You will be notified when new trips are assigned.</p>`;
       return;
     }
 
@@ -59,7 +78,7 @@
       </div>
     `;
   } catch (err) {
-    clearTimeout(timeoutId);
-    showError('Could not load your dashboard. Please refresh the page.');
+    clearTimeout(loadingTimeout);
+    showError('Something went wrong. Please refresh the page or contact your administrator.');
   }
 })();
