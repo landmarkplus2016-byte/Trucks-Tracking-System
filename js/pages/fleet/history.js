@@ -61,7 +61,7 @@
         <td class="num">${formatCurrency(t.totalCost)}</td>
         <td><span class="status-pill ${t.status}">${t.status}</span></td>
         <td>
-          <a href="${ROUTES.FLEET_EDIT_TRIP}?tripId=${encodeURIComponent(t.tripId)}" class="btn btn-sm btn-secondary">Edit</a>
+          <a href="edit-trip.html?tripId=${encodeURIComponent(t.tripId)}" class="btn btn-sm btn-secondary">Edit</a>
         </td>
       </tr>
     `).join('');

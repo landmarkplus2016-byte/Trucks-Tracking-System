@@ -169,7 +169,7 @@
 
     try {
       await updateTrip(tripId, payload);
-      window.location.href = ROUTES.FLEET_HISTORY;
+      window.location.href = 'dashboard.html';
     } catch (err) {
       formErrorEl.textContent = err.message || 'Failed to save changes.';
       formErrorEl.classList.remove('hidden');
@@ -192,7 +192,7 @@
 
     try {
       await deleteTrip(tripId);
-      window.location.href = ROUTES.FLEET_HISTORY;
+      window.location.href = 'dashboard.html';
     } catch (err) {
       await showAlert({ title: 'Error', message: err.message || 'Failed to delete trip.' });
       deleteBtn.disabled = false;

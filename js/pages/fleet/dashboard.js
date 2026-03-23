@@ -43,7 +43,7 @@
     const recent = [...trips].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
 
     if (recent.length === 0) {
-      recentTableEl.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No trips yet. <a href="${ROUTES.FLEET_NEW_TRIP}" class="text-primary">Create the first one</a>.</td></tr>`;
+      recentTableEl.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No trips yet. <a href="new-trip.html" class="text-primary">Create the first one</a>.</td></tr>`;
     } else {
       recentTableEl.innerHTML = recent.map(t => `
         <tr>
@@ -57,7 +57,7 @@
           </td>
           <td>
             <div class="trip-actions">
-              <a href="${ROUTES.FLEET_EDIT_TRIP}?tripId=${encodeURIComponent(t.tripId)}" class="btn btn-sm btn-secondary">Edit</a>
+              <a href="edit-trip.html?tripId=${encodeURIComponent(t.tripId)}" class="btn btn-sm btn-secondary">Edit</a>
             </div>
           </td>
         </tr>

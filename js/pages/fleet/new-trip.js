@@ -138,7 +138,7 @@
 
     try {
       await createTrip(payload);
-      window.location.href = ROUTES.FLEET_DASHBOARD;
+      window.location.href = 'dashboard.html';
     } catch (err) {
       errorEl.textContent = err.message || 'Failed to create trip. Please try again.';
       errorEl.classList.remove('hidden');
