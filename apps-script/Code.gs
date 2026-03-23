@@ -71,12 +71,63 @@ function doPost(e) {
 }
 
 /**
- * Required for CORS preflight from GitHub Pages.
+ * Entry point for all HTTP GET requests.
+ * Handles all actions via URL parameters to avoid CORS redirect issues with POST.
  * @param {GoogleAppsScript.Events.DoGet} e
  * @returns {GoogleAppsScript.Content.TextOutput}
  */
 function doGet(e) {
-  return jsonResponse({ success: true, message: 'Trucks Tracking System API is running.' });
+  var action = (e.parameter && e.parameter.action) || '';
+  if (!action) {
+    return jsonResponse({ success: true, message: 'Trucks Tracking System API is running.' });
+  }
+
+  var data = {};
+  try {
+    data = JSON.parse((e.parameter && e.parameter.data) || '{}');
+  } catch (err) {
+    return jsonResponse({ success: false, error: 'Invalid data.' });
+  }
+
+  try {
+    switch (action) {
+      // Auth
+      case 'login':
+        return jsonResponse(validateUser(data));
+
+      // Trips
+      case 'getTrips':
+        return jsonResponse(getTrips(data));
+      case 'createTrip':
+        return jsonResponse(createTrip(data));
+      case 'updateTrip':
+        return jsonResponse(updateTrip(data));
+      case 'deleteTrip':
+        return jsonResponse(deleteTrip(data));
+
+      // Sites
+      case 'getSitesByTrip':
+        return jsonResponse(getSitesByTrip(data));
+      case 'updateJobCode':
+        return jsonResponse(updateJobCode(data));
+
+      // Cost
+      case 'getCostBreakdown':
+        return jsonResponse(getCostBreakdown(data));
+
+      // Notifications
+      case 'getUnreadNotifications':
+        return jsonResponse(getUnreadNotifications(data));
+      case 'markNotifRead':
+        return jsonResponse(markNotifRead(data));
+
+      default:
+        return jsonResponse({ success: false, error: 'Unknown action: ' + action });
+    }
+  } catch (err) {
+    Logger.log('doGet error [' + action + ']: ' + err.message);
+    return jsonResponse({ success: false, error: 'Server error: ' + err.message });
+  }
 }
 
 /**
@@ -92,12 +143,22 @@ function jsonResponse(obj) {
 }
 
 /**
- * Get a sheet tab by name from the active spreadsheet.
+ * Open the spreadsheet by ID stored in Script Properties.
+ * Set SHEET_ID via Apps Script → Project Settings → Script Properties.
+ * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet}
+ */
+function getSpreadsheet() {
+  var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  return SpreadsheetApp.openById(id);
+}
+
+/**
+ * Get a sheet tab by name using getSpreadsheet().
  * @param {string} tabName
  * @returns {GoogleAppsScript.Spreadsheet.Sheet}
  */
 function getSheet(tabName) {
-  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var ss    = getSpreadsheet();
   var sheet = ss.getSheetByName(tabName);
   if (!sheet) throw new Error('Sheet tab not found: ' + tabName);
   return sheet;
