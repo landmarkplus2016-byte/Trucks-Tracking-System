@@ -17,30 +17,30 @@ function renderNavbar(activePath) {
   const isProject = user.role === ROLES.PROJECT;
 
   const fleetLinks = isFleet ? `
-    <a href="${ROUTES.FLEET_DASHBOARD}"  class="${activePath === ROUTES.FLEET_DASHBOARD  ? 'active' : ''}">
+    <a href="dashboard.html"  class="${activePath === ROUTES.FLEET_DASHBOARD  ? 'active' : ''}">
       <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2H3V4zm0 4h14v8a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm5 3a1 1 0 000 2h4a1 1 0 000-2H8z"/></svg>
       <span>Dashboard</span>
     </a>
-    <a href="${ROUTES.FLEET_NEW_TRIP}" class="${activePath === ROUTES.FLEET_NEW_TRIP ? 'active' : ''}">
+    <a href="new-trip.html" class="${activePath === ROUTES.FLEET_NEW_TRIP ? 'active' : ''}">
       <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
       <span>New Trip</span>
     </a>
-    <a href="${ROUTES.FLEET_HISTORY}" class="${activePath === ROUTES.FLEET_HISTORY ? 'active' : ''}">
+    <a href="history.html" class="${activePath === ROUTES.FLEET_HISTORY ? 'active' : ''}">
       <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
       <span>History</span>
     </a>
   ` : '';
 
   const projectLinks = isProject ? `
-    <a href="${ROUTES.PROJECT_DASHBOARD}" class="${activePath === ROUTES.PROJECT_DASHBOARD ? 'active' : ''}">
+    <a href="dashboard.html" class="${activePath === ROUTES.PROJECT_DASHBOARD ? 'active' : ''}">
       <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2H3V4zm0 4h14v8a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm5 3a1 1 0 000 2h4a1 1 0 000-2H8z"/></svg>
       <span>Dashboard</span>
     </a>
-    <a href="${ROUTES.PROJECT_PENDING_JC}" class="${activePath === ROUTES.PROJECT_PENDING_JC ? 'active' : ''}">
+    <a href="pending-jc.html" class="${activePath === ROUTES.PROJECT_PENDING_JC ? 'active' : ''}">
       <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
       <span>Pending JC</span>
     </a>
-    <a href="${ROUTES.PROJECT_HISTORY}" class="${activePath === ROUTES.PROJECT_HISTORY ? 'active' : ''}">
+    <a href="history.html" class="${activePath === ROUTES.PROJECT_HISTORY ? 'active' : ''}">
       <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
       <span>History</span>
     </a>
@@ -48,7 +48,7 @@ function renderNavbar(activePath) {
 
   const html = `
     <nav class="navbar">
-      <a class="navbar-brand" href="${isFleet ? ROUTES.FLEET_DASHBOARD : ROUTES.PROJECT_DASHBOARD}">
+      <a class="navbar-brand" href="dashboard.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="1" y="3" width="15" height="13" rx="1"/>
           <path d="M16 8h4l3 3v5h-7V8z"/>

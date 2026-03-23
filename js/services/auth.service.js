@@ -23,7 +23,7 @@ async function login(email, password) {
  */
 function logout() {
   clearSession();
-  window.location.href = ROUTES.LOGIN;
+  window.location.href = '../../index.html';
 }
 
 /**
@@ -62,7 +62,7 @@ function clearSession() {
 function requireAuth() {
   const user = getCurrentUser();
   if (!user) {
-    window.location.href = ROUTES.LOGIN;
+    window.location.href = '../../index.html';
     throw new Error('Not authenticated'); // stops page script execution
   }
   return user;
@@ -76,9 +76,7 @@ function requireRole(requiredRole) {
   const user = requireAuth();
   if (user.role !== requiredRole) {
     // Send each role to their own home
-    const home = user.role === ROLES.FLEET
-      ? ROUTES.FLEET_DASHBOARD
-      : ROUTES.PROJECT_DASHBOARD;
+    const home = 'dashboard.html';
     window.location.href = home;
     throw new Error(`Wrong role: need ${requiredRole}, have ${user.role}`);
   }
