@@ -58,8 +58,18 @@ async function getLists(listName) {
 }
 
 /**
- * Get all project coordinators (name + email) from the Users sheet.
- * @returns {Promise<Array<{ email: string, name: string }>>}
+ * Alias for getLists — returns { value, label } items for a named list.
+ * @param {string} listName
+ * @returns {Promise<Array<{ value: string, label: string }>>}
+ */
+async function getListValues(listName) {
+  const result = await fetchAPI(ACTIONS.GET_LIST, { listName });
+  return result.data || [];
+}
+
+/**
+ * Get all project coordinators from the Users sheet.
+ * @returns {Promise<Array<{ value: string, label: string }>>}
  */
 async function getCoordinators() {
   const result = await fetchAPI(ACTIONS.GET_COORDINATORS, {});

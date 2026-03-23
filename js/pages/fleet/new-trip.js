@@ -10,7 +10,7 @@
   const submitBtn      = document.getElementById('submit-btn');
   const errorEl        = document.getElementById('form-error');
   const sitesContainer = document.getElementById('sites-container');
-  const whRepSelect    = document.getElementById('wh-rep');
+  const whRepSelect    = document.getElementById('whRep');
 
   const FALLBACK_WH_REPS = [
     { value: 'Ehab',  label: 'Ehab' },
@@ -29,7 +29,6 @@
   const loadingTimeout = setTimeout(() => {
     // Fallback — let the user proceed with hardcoded options
     populateWhRep(FALLBACK_WH_REPS);
-    coordinators = [];
     submitBtn.disabled = false;
   }, 10000);
 
@@ -47,8 +46,7 @@
 
   document.getElementById('trip-date').value = todayForInput();
 
-  let siteCount    = 0;
-  let coordinators = [];
+  let siteCount = 0;
 
   // Load WH reps and coordinators in parallel
   try {
@@ -62,21 +60,18 @@
       ? whRepsResult.data
       : FALLBACK_WH_REPS;
 
-    coordinators = (coordResult.success && coordResult.data) ? coordResult.data : [];
-
     populateWhRep(whReps);
   } catch (err) {
     clearTimeout(loadingTimeout);
     populateWhRep(FALLBACK_WH_REPS);
-    coordinators = [];
   }
 
   submitBtn.disabled = false;
 
-  // Add first site entry after coordinators are loaded
+  // Add first site entry after dropdowns are ready
   addSiteEntry();
 
-  document.getElementById('add-site-btn').addEventListener('click', addSiteEntry);
+  document.getElementById('add-site-btn').addEventListener('click', () => addSiteEntry());
 
   function populateWhRep(options) {
     whRepSelect.innerHTML =
@@ -85,15 +80,21 @@
     whRepSelect.disabled = false;
   }
 
-  function buildCoordinatorSelect(selectedEmail) {
-    if (!coordinators.length) {
-      // Fallback to email text input if no coordinators loaded
-      return `<input type="email" class="form-control" name="coordinatorEmail" placeholder="coordinator@example.com" value="${escapeHtml(selectedEmail || '')}" />`;
+  async function loadCoordinatorOptions(selectEl) {
+    try {
+      const items = await getListValues('coordinator');
+      // Fall back to getCoordinators if list is empty
+      const list = (items && items.length) ? items : await getCoordinators();
+      selectEl.innerHTML = '<option value="">Select Coordinator…</option>';
+      list.forEach(function (item) {
+        const opt = document.createElement('option');
+        opt.value = item.value;
+        opt.textContent = item.label;
+        selectEl.appendChild(opt);
+      });
+    } catch (err) {
+      selectEl.innerHTML = '<option value="">Could not load coordinators</option>';
     }
-    const options = coordinators.map(c =>
-      `<option value="${escapeHtml(c.email)}" ${c.email === selectedEmail ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
-    ).join('');
-    return `<select class="form-control" name="coordinatorEmail"><option value="">Select coordinator…</option>${options}</select>`;
   }
 
   function addSiteEntry(site = null) {
@@ -115,12 +116,20 @@
         </div>
         <div class="form-group">
           <label class="form-label">Coordinator <span class="required">*</span></label>
-          ${buildCoordinatorSelect(site?.coordinatorEmail || '')}
+          <select class="form-control coordinator-select" name="coordinatorEmail">
+            <option value="">Loading…</option>
+          </select>
           <span class="form-error hidden" data-error="site_${idx-1}_email"></span>
         </div>
       </div>
     `;
     sitesContainer.appendChild(div);
+
+    const selectEl = div.querySelector('.coordinator-select');
+    loadCoordinatorOptions(selectEl).then(() => {
+      if (site && site.coordinatorEmail) selectEl.value = site.coordinatorEmail;
+    });
+
     updateCostPreview();
   }
 
@@ -141,10 +150,10 @@
   }
 
   function updateCostPreview() {
-    const labor = Number(document.getElementById('labor-cost').value) || 0;
-    const park  = Number(document.getElementById('park-cost').value)  || 0;
-    const truck = Number(document.getElementById('truck-cost').value) || 0;
-    const hotel = Number(document.getElementById('hotel-cost').value) || 0;
+    const labor = Number(document.getElementById('laborCost').value) || 0;
+    const park  = Number(document.getElementById('parkCost').value)  || 0;
+    const truck = Number(document.getElementById('truckCost').value) || 0;
+    const hotel = Number(document.getElementById('hotelCost').value) || 0;
     const siteEntries = sitesContainer.querySelectorAll('.site-entry');
     const total   = sumTripCosts({ laborCost: labor, parkCost: park, truckCost: truck, hotelCost: hotel });
     const perSite = splitCostPerSite(total, siteEntries.length);
@@ -157,7 +166,7 @@
     document.getElementById('preview-per-site').textContent = `${formatCurrency(perSite)} × ${siteEntries.length} site(s)`;
   }
 
-  ['labor-cost','park-cost','truck-cost','hotel-cost'].forEach(id => {
+  ['laborCost','parkCost','truckCost','hotelCost'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', updateCostPreview);
   });
 
@@ -176,10 +185,10 @@
         whRep:     whRepSelect.value,
         driver:    document.getElementById('driver').value.trim(),
         route:     document.getElementById('route').value.trim(),
-        laborCost: Number(document.getElementById('labor-cost').value) || 0,
-        parkCost:  Number(document.getElementById('park-cost').value)  || 0,
-        truckCost: Number(document.getElementById('truck-cost').value) || 0,
-        hotelCost: Number(document.getElementById('hotel-cost').value) || 0,
+        laborCost: Number(document.getElementById('laborCost').value) || 0,
+        parkCost:  Number(document.getElementById('parkCost').value)  || 0,
+        truckCost: Number(document.getElementById('truckCost').value) || 0,
+        hotelCost: Number(document.getElementById('hotelCost').value) || 0,
         createdBy: user.email,
       },
       sites,

@@ -31,7 +31,7 @@ function getList(data) {
 /**
  * Get all project coordinators (name + email) from the Users tab.
  * Returns coordinatorName if set, otherwise falls back to name.
- * @returns {{ success: boolean, data: Array<{ email: string, name: string }> }}
+ * @returns {{ success: boolean, data: Array<{ value: string, label: string }> }}
  */
 function getCoordinators() {
   var rows = sheetToObjects(getSheet(TABS.USERS));
@@ -42,8 +42,8 @@ function getCoordinators() {
     })
     .map(function (r) {
       return {
-        email: String(r.email || '').trim(),
-        name:  String(r.coordinatorName || r.name || '').trim(),
+        value: String(r.email || '').trim(),
+        label: String(r.coordinatorName || r.name || '').trim(),
       };
     })
     .filter(function (r) { return r.email; }); // drop rows with no email

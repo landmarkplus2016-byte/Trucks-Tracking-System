@@ -14,7 +14,7 @@
   const deleteBtn     = document.getElementById('delete-btn');
   const formErrorEl   = document.getElementById('form-error');
   const sitesContainer= document.getElementById('sites-container');
-  const whRepSelect   = document.getElementById('wh-rep');
+  const whRepSelect   = document.getElementById('whRep');
 
   const FALLBACK_WH_REPS = [
     { value: 'Ehab',  label: 'Ehab' },
@@ -54,15 +54,30 @@
     return;
   }
 
-  let siteCount    = 0;
-  let coordinators = [];
+  let siteCount = 0;
+
+  async function loadCoordinatorOptions(selectEl, selectedEmail) {
+    try {
+      const items = await getListValues('coordinator');
+      const list = (items && items.length) ? items : await getCoordinators();
+      selectEl.innerHTML = '<option value="">Select Coordinator…</option>';
+      list.forEach(function (item) {
+        const opt = document.createElement('option');
+        opt.value = item.value;
+        opt.textContent = item.label;
+        selectEl.appendChild(opt);
+      });
+      if (selectedEmail) selectEl.value = selectedEmail;
+    } catch (err) {
+      selectEl.innerHTML = '<option value="">Could not load coordinators</option>';
+    }
+  }
 
   try {
-    const [tripResult, sitesResult, whRepsResult, coordResult] = await Promise.all([
+    const [tripResult, sitesResult, whRepsResult] = await Promise.all([
       fetchAPI(ACTIONS.GET_TRIPS,         { tripId }),
       fetchAPI(ACTIONS.GET_SITES_BY_TRIP, { tripId }),
       fetchAPI(ACTIONS.GET_LIST,          { listName: 'whRep' }),
-      fetchAPI(ACTIONS.GET_COORDINATORS,  {}),
     ]);
     clearTimeout(loadingTimeout);
 
@@ -99,20 +114,18 @@
       whRepSelect.innerHTML += `<option value="${escapeHtml(trip.whRep)}" selected>${escapeHtml(trip.whRep)}</option>`;
     }
 
-    coordinators = (coordResult.success && coordResult.data) ? coordResult.data : [];
-
     hideLoading();
     formSection.classList.remove('hidden');
 
     // Populate trip fields
     document.getElementById('trip-id-label').textContent = tripId;
-    document.getElementById('trip-date').value   = trip.date      || '';
-    document.getElementById('driver').value      = trip.driver    || '';
-    document.getElementById('route').value       = trip.route     || '';
-    document.getElementById('labor-cost').value  = trip.laborCost || '';
-    document.getElementById('park-cost').value   = trip.parkCost  || '';
-    document.getElementById('truck-cost').value  = trip.truckCost || '';
-    document.getElementById('hotel-cost').value  = trip.hotelCost || '';
+    document.getElementById('trip-date').value  = trip.date      || '';
+    document.getElementById('driver').value     = trip.driver    || '';
+    document.getElementById('route').value      = trip.route     || '';
+    document.getElementById('laborCost').value  = trip.laborCost || '';
+    document.getElementById('parkCost').value   = trip.parkCost  || '';
+    document.getElementById('truckCost').value  = trip.truckCost || '';
+    document.getElementById('hotelCost').value  = trip.hotelCost || '';
 
     // Populate site entries
     sites.forEach(s => addSiteEntry(s));
@@ -126,16 +139,6 @@
   }
 
   document.getElementById('add-site-btn').addEventListener('click', () => addSiteEntry());
-
-  function buildCoordinatorSelect(selectedEmail) {
-    if (!coordinators.length) {
-      return `<input type="email" class="form-control" name="coordinatorEmail" placeholder="coordinator@example.com" value="${escapeHtml(selectedEmail || '')}" />`;
-    }
-    const options = coordinators.map(c =>
-      `<option value="${escapeHtml(c.email)}" ${c.email === selectedEmail ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
-    ).join('');
-    return `<select class="form-control" name="coordinatorEmail"><option value="">Select coordinator…</option>${options}</select>`;
-  }
 
   function addSiteEntry(site = null) {
     siteCount++;
@@ -157,11 +160,16 @@
         </div>
         <div class="form-group">
           <label class="form-label">Coordinator <span class="required">*</span></label>
-          ${buildCoordinatorSelect(site?.coordinatorEmail || '')}
+          <select class="form-control coordinator-select" name="coordinatorEmail">
+            <option value="">Loading…</option>
+          </select>
         </div>
       </div>
     `;
     sitesContainer.appendChild(div);
+
+    const selectEl = div.querySelector('.coordinator-select');
+    loadCoordinatorOptions(selectEl, site?.coordinatorEmail || '');
   }
 
   window.removeSiteEntry = function (btn) {
@@ -178,10 +186,10 @@
   }
 
   function updateCostPreview() {
-    const labor = Number(document.getElementById('labor-cost').value) || 0;
-    const park  = Number(document.getElementById('park-cost').value)  || 0;
-    const truck = Number(document.getElementById('truck-cost').value) || 0;
-    const hotel = Number(document.getElementById('hotel-cost').value) || 0;
+    const labor = Number(document.getElementById('laborCost').value) || 0;
+    const park  = Number(document.getElementById('parkCost').value)  || 0;
+    const truck = Number(document.getElementById('truckCost').value) || 0;
+    const hotel = Number(document.getElementById('hotelCost').value) || 0;
     const siteEntries = sitesContainer.querySelectorAll('.site-entry');
     const total   = sumTripCosts({ laborCost: labor, parkCost: park, truckCost: truck, hotelCost: hotel });
     const perSite = splitCostPerSite(total, siteEntries.length);
@@ -189,7 +197,7 @@
     document.getElementById('preview-per-site').textContent = `${formatCurrency(perSite)} × ${siteEntries.length} site(s)`;
   }
 
-  ['labor-cost','park-cost','truck-cost','hotel-cost'].forEach(id => {
+  ['laborCost','parkCost','truckCost','hotelCost'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', updateCostPreview);
   });
 
@@ -210,10 +218,10 @@
         whRep:     whRepSelect.value,
         driver:    document.getElementById('driver').value.trim(),
         route:     document.getElementById('route').value.trim(),
-        laborCost: Number(document.getElementById('labor-cost').value) || 0,
-        parkCost:  Number(document.getElementById('park-cost').value)  || 0,
-        truckCost: Number(document.getElementById('truck-cost').value) || 0,
-        hotelCost: Number(document.getElementById('hotel-cost').value) || 0,
+        laborCost: Number(document.getElementById('laborCost').value) || 0,
+        parkCost:  Number(document.getElementById('parkCost').value)  || 0,
+        truckCost: Number(document.getElementById('truckCost').value) || 0,
+        hotelCost: Number(document.getElementById('hotelCost').value) || 0,
       },
       sites,
     };
