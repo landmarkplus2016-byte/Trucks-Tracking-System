@@ -186,7 +186,7 @@ function updateTrip(data) {
     // Re-insert sites
     data.sites.forEach(function (site) {
       sitesSheet.appendRow([
-        site.siteId || generateId('SITE'),
+        site.siteId           || generateId('SITE'),
         tripId,
         site.siteNumber       || '',
         site.coordinatorEmail || '',
