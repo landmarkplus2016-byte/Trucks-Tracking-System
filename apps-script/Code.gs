@@ -162,8 +162,7 @@ function jsonResponse(obj) {
  * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet}
  */
 function getSpreadsheet() {
-  var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
-  return SpreadsheetApp.openById(id);
+  return SpreadsheetApp.openById('167LeUQQLTf9BHNbWExgWIabU24AvJTEUZSoXEDwX41M');
 }
 
 /**

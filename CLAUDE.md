@@ -4,11 +4,22 @@ Developer notes for Claude. Read this before making any changes.
 
 ---
 
+## Project Links
+
+| | |
+|---|---|
+| **Live URL** | https://landmarkplus2016-byte.github.io/Trucks-Tracking-System/ |
+| **GitHub** | https://github.com/landmarkplus2016-byte/Trucks-Tracking-System |
+| **Apps Script URL** | https://script.google.com/macros/s/AKfycbwehWt6IZc7bhUW4NqYEzshfY7JEmOEZEB1WSRpwb75yrwqv-Oak5Klnx7XlF8q3Nkl/exec |
+| **Sheet ID** | `167LeUQQLTf9BHNbWExgWIabU24AvJTEUZSoXEDwX41M` |
+
+---
+
 ## Tech Stack
 
 - **Frontend:** Plain HTML5 + CSS3 + Vanilla JS (ES6+) — no build tools, no npm, no frameworks
 - **Backend:** Google Apps Script deployed as a Web App
-- **Database:** Google Sheets (one file, five tabs)
+- **Database:** Google Sheets (one file, six tabs)
 - **Hosting:** GitHub Pages — must work by opening `index.html` directly, no server required
 
 ---
@@ -89,34 +100,34 @@ Inline nav links within the same folder use bare filenames: `href="dashboard.htm
 ## Apps Script — Key Details
 
 ### Spreadsheet access
-`SpreadsheetApp.getActiveSpreadsheet()` returns `null` when running as a deployed Web App (no active spreadsheet context). **Always use `getSpreadsheet()`** defined in `Code.gs`:
+`getSpreadsheet()` in `Code.gs` uses a **hardcoded sheet ID** — NOT Script Properties:
 
 ```js
 function getSpreadsheet() {
-  var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
-  return SpreadsheetApp.openById(id);
+  return SpreadsheetApp.openById('167LeUQQLTf9BHNbWExgWIabU24AvJTEUZSoXEDwX41M');
 }
 ```
 
-The sheet ID must be set as a Script Property named `SHEET_ID` (Project Settings → Script Properties).
+Do **not** revert this to `PropertiesService` — the ID is intentionally hardcoded.
 
 ### All sheet access goes through `getSheet(tabName)`
 Defined in `Code.gs`. No other `.gs` file should call `SpreadsheetApp` directly — they all use `getSheet(TABS.*)`.
 
-### Deployment
+### Deployment workflow
 - Deploy as **Web App**, execute as **Me**, access **Anyone**
-- After any `.gs` change: **Deploy → Manage deployments → Edit → New version → Deploy**
+- After **any** `.gs` change: copy-paste the updated file(s) into the Apps Script browser editor, then **Deploy → Manage deployments → Edit → New version → Deploy**
 - The URL does not change on redeploy — no need to update `config.js`
 - CORS is handled by `ContentService.createTextOutput(...).setMimeType(MimeType.JSON)` — no extra headers needed
 
-### Google Sheet tab names (must match `TABS` in `Code.gs`)
-| Tab | Key columns |
+### Google Sheet tabs (must match `TABS` in `Code.gs`)
+| Tab | Columns |
 |---|---|
 | `Trips` | tripId, date, whRep, driver, route, laborCost, parkCost, truckCost, hotelCost, totalCost, status, createdBy, createdAt |
 | `Sites` | siteId, tripId, siteNumber, coordinatorEmail, jobCode, costShare, jcStatus |
-| `Users` | userId, name, email, role, password |
+| `Users` | userId, name, email, role, password, coordinatorName |
 | `Notifications` | notifId, toEmail, tripId, message, isRead, createdAt |
 | `Lists` | listName, value, label, sortOrder |
+| `Cost per Site` | Date, Coordinator, Site, Job Code, Route, Driver, Total Cost, Status |
 
 `Lists` powers dynamic dropdowns. Example rows for WH Representatives:
 
@@ -124,6 +135,10 @@ Defined in `Code.gs`. No other `.gs` file should call `SpreadsheetApp` directly 
 |---|---|---|---|
 | whRep | Ehab | Ehab | 1 |
 | whRep | Karam | Karam | 2 |
+
+### Known issues (2026-03-24)
+- Pending JC page needs end-to-end testing after latest coordinator email fix
+- Cost per Site tab and `rebuildCostPerSiteReport()` created but not yet tested in production
 
 ---
 
@@ -221,3 +236,31 @@ https://script.google.com/macros/s/AKfycbwehWt6IZc7bhUW4NqYEzshfY7JEmOEZEB1WSRpw
 - All three project page scripts (`dashboard.js`, `pending-jc.js`, `history.js`): `requireRole` catch changed from `showError(...)` to `window.location.href = '../../index.html'; return;`
 - Previously the catch was displaying a misleading "Could not reach the server" error while also navigating away
 - Now: any auth/role failure cleanly redirects to login without showing an error on the wrong page
+
+---
+
+## Changes Made — 2026-03-24 (continued)
+
+### Redesign: Group-based site entry in New Trip and Edit Trip forms
+- Replaced individual site rows with coordinator groups: one group = one coordinator + multiple site numbers
+- Sites input accepts `/` or `-` as separators (e.g. `1234/5678/8907`)
+- Button renamed from "Add Another Site" → "Add Another Coordinator"; groups labeled "Group 1", "Group 2" etc.
+- `parseSiteNumbers()` and `calculateCostPerSite()` added to `js/utils/cost-calculator.js`
+- On submit: groups are expanded into individual site records before sending to the server
+- Edit trip: existing sites are re-grouped by coordinator email on load; original `siteId`/`jobCode`/`jcStatus` preserved by matching parsed site numbers back to originals on save
+- Cost preview updates live as site numbers are typed (counts parsed sites across all groups)
+- Pending JC page (`pending-jc.js`) and `site-list.js` unchanged — they already show individual site rows
+
+### Fix: Sites sheet `coordinatorName` column removed
+- Column was added then removed; both `appendRow` calls in `trips.gs` (`createTrip` and `updateTrip`) updated to 7-column order: siteId, tripId, siteNumber, coordinatorEmail, jobCode, costShare, jcStatus
+
+### Feature: Cost per Site reporting tab
+- New file `apps-script/reports.gs` with `rebuildCostPerSiteReport()`
+- Rebuilds the "Cost per Site" sheet from scratch on every write operation (one row per site, sorted newest first)
+- Coordinator display name resolved from the Lists sheet (`listName = 'coordinator'`)
+- Trigger added (wrapped in `try/catch`) to: `createTrip`, `updateTrip`, `deleteTrip` in `trips.gs`; `updateJobCode` in `sites.gs`
+- `COST_PER_SITE: 'Cost per Site'` added to `TABS` in `Code.gs`
+
+### Fix: `getSpreadsheet()` hardcoded sheet ID
+- Replaced `PropertiesService.getScriptProperties().getProperty('SHEET_ID')` with hardcoded ID `167LeUQQLTf9BHNbWExgWIabU24AvJTEUZSoXEDwX41M`
+- No Script Property setup required
