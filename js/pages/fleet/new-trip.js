@@ -1,7 +1,8 @@
 /**
  * pages/fleet/new-trip.js
  * ───────────────────────
- * Create a new trip with dynamic site entries.
+ * Create a new trip with group-based site entries.
+ * Each group = one coordinator + multiple site numbers (separated by / or -).
  * WH Rep and coordinator dropdowns are loaded from the API on page load.
  */
 
@@ -27,7 +28,6 @@
   submitBtn.disabled   = true;
 
   const loadingTimeout = setTimeout(() => {
-    // Fallback — let the user proceed with hardcoded options
     populateWhRep(FALLBACK_WH_REPS);
     submitBtn.disabled = false;
   }, 10000);
@@ -46,13 +46,12 @@
 
   document.getElementById('trip-date').value = todayForInput();
 
-  let siteCount = 0;
+  let groupCount = 0;
 
   // Load WH reps and coordinators in parallel
   try {
-    const [whRepsResult, coordResult] = await Promise.all([
+    const [whRepsResult] = await Promise.all([
       fetchAPI(ACTIONS.GET_LIST, { listName: 'whRep' }),
-      fetchAPI(ACTIONS.GET_COORDINATORS, {}),
     ]);
     clearTimeout(loadingTimeout);
 
@@ -68,10 +67,10 @@
 
   submitBtn.disabled = false;
 
-  // Add first site entry after dropdowns are ready
-  addSiteEntry();
+  // Add first group after dropdowns are ready
+  addGroupEntry();
 
-  document.getElementById('add-site-btn').addEventListener('click', () => addSiteEntry());
+  document.getElementById('add-site-btn').addEventListener('click', () => addGroupEntry());
 
   function populateWhRep(options) {
     whRepSelect.innerHTML =
@@ -80,10 +79,9 @@
     whRepSelect.disabled = false;
   }
 
-  async function loadCoordinatorOptions(selectEl) {
+  async function loadCoordinatorOptions(selectEl, selectedEmail) {
     try {
       const items = await getListValues('coordinator');
-      // Fall back to getCoordinators if list is empty
       const list = (items && items.length) ? items : await getCoordinators();
       selectEl.innerHTML = '<option value="">Select Coordinator…</option>';
       list.forEach(function (item) {
@@ -92,60 +90,64 @@
         opt.textContent = item.label;
         selectEl.appendChild(opt);
       });
+      if (selectedEmail) selectEl.value = selectedEmail;
     } catch (err) {
       selectEl.innerHTML = '<option value="">Could not load coordinators</option>';
     }
   }
 
-  function addSiteEntry(site = null) {
-    siteCount++;
-    const idx = siteCount;
+  function addGroupEntry(group = null) {
+    groupCount++;
+    const idx = groupCount;
     const div = document.createElement('div');
     div.className = 'site-entry';
-    div.dataset.siteIndex = idx;
+    div.dataset.groupIndex = idx;
+
     div.innerHTML = `
       <div class="site-entry-header">
-        <span class="site-entry-label">Site ${idx}</span>
-        ${idx > 1 ? `<button type="button" class="btn btn-sm btn-danger" onclick="removeSiteEntry(this)">Remove</button>` : ''}
+        <span class="site-entry-label">Group ${idx}</span>
+        ${idx > 1 ? `<button type="button" class="btn btn-sm btn-danger" onclick="removeGroupEntry(this)">Remove</button>` : ''}
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Site Number <span class="required">*</span></label>
-          <input type="text" class="form-control" name="siteNumber" data-field="site_${idx-1}_siteNumber" placeholder="e.g. SITE-042" required />
-          <span class="form-error hidden" data-error="site_${idx-1}_siteNumber"></span>
+          <label class="form-label">Sites <span class="required">*</span></label>
+          <input type="text" class="form-control" name="groupSites"
+                 placeholder="e.g. 1234/5678/8907 or 1234-5678-8907"
+                 value="${escapeHtml(group?.rawSites || '')}" />
+          <span class="form-error hidden sites-field-error"></span>
         </div>
         <div class="form-group">
           <label class="form-label">Coordinator <span class="required">*</span></label>
           <select class="form-control coordinator-select" name="coordinatorEmail">
             <option value="">Loading…</option>
           </select>
-          <span class="form-error hidden" data-error="site_${idx-1}_email"></span>
+          <span class="form-error hidden coord-field-error"></span>
         </div>
       </div>
     `;
     sitesContainer.appendChild(div);
 
+    div.querySelector('[name="groupSites"]').addEventListener('input', updateCostPreview);
+
     const selectEl = div.querySelector('.coordinator-select');
-    loadCoordinatorOptions(selectEl).then(() => {
-      if (site && site.coordinatorEmail) selectEl.value = site.coordinatorEmail;
-    });
+    loadCoordinatorOptions(selectEl, group?.coordinatorEmail || '');
 
     updateCostPreview();
   }
 
-  window.removeSiteEntry = function (btn) {
+  window.removeGroupEntry = function (btn) {
     const entry = btn.closest('.site-entry');
     if (entry) {
       entry.remove();
-      updateSiteLabels();
+      updateGroupLabels();
       updateCostPreview();
     }
   };
 
-  function updateSiteLabels() {
+  function updateGroupLabels() {
     sitesContainer.querySelectorAll('.site-entry').forEach((el, i) => {
       const label = el.querySelector('.site-entry-label');
-      if (label) label.textContent = `Site ${i + 1}`;
+      if (label) label.textContent = `Group ${i + 1}`;
     });
   }
 
@@ -154,16 +156,23 @@
     const park  = Number(document.getElementById('parkCost').value)  || 0;
     const truck = Number(document.getElementById('truckCost').value) || 0;
     const hotel = Number(document.getElementById('hotelCost').value) || 0;
-    const siteEntries = sitesContainer.querySelectorAll('.site-entry');
-    const total   = sumTripCosts({ laborCost: labor, parkCost: park, truckCost: truck, hotelCost: hotel });
-    const perSite = splitCostPerSite(total, siteEntries.length);
+    const total = sumTripCosts({ laborCost: labor, parkCost: park, truckCost: truck, hotelCost: hotel });
+
+    const groups = [];
+    sitesContainer.querySelectorAll('.site-entry').forEach(el => {
+      groups.push({ sites: el.querySelector('[name="groupSites"]')?.value || '' });
+    });
+    const totalSiteCount = groups.reduce((sum, g) => sum + parseSiteNumbers(g.sites).length, 0);
+    const perSite = totalSiteCount > 0 ? splitCostPerSite(total, totalSiteCount) : 0;
 
     document.getElementById('preview-labor').textContent    = formatCurrency(labor);
     document.getElementById('preview-park').textContent     = formatCurrency(park);
     document.getElementById('preview-truck').textContent    = formatCurrency(truck);
     document.getElementById('preview-hotel').textContent    = formatCurrency(hotel);
     document.getElementById('preview-total').textContent    = formatCurrency(total);
-    document.getElementById('preview-per-site').textContent = `${formatCurrency(perSite)} × ${siteEntries.length} site(s)`;
+    document.getElementById('preview-per-site').textContent = totalSiteCount > 0
+      ? `${formatCurrency(perSite)} × ${totalSiteCount} site(s)`
+      : '—';
   }
 
   ['laborCost','parkCost','truckCost','hotelCost'].forEach(id => {
@@ -173,9 +182,10 @@
   function collectFormData() {
     const sites = [];
     sitesContainer.querySelectorAll('.site-entry').forEach(el => {
-      sites.push({
-        siteNumber:       el.querySelector('[name="siteNumber"]')?.value.trim()       || '',
-        coordinatorEmail: el.querySelector('[name="coordinatorEmail"]')?.value.trim() || '',
+      const rawSites        = el.querySelector('[name="groupSites"]')?.value || '';
+      const coordinatorEmail = el.querySelector('[name="coordinatorEmail"]')?.value || '';
+      parseSiteNumbers(rawSites).forEach(num => {
+        sites.push({ siteNumber: num, coordinatorEmail });
       });
     });
 
@@ -198,6 +208,40 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorEl.classList.add('hidden');
+    clearFormErrors(form);
+
+    // Validate groups
+    let hasGroupError = false;
+    sitesContainer.querySelectorAll('.site-entry').forEach(el => {
+      const sitesInput = el.querySelector('[name="groupSites"]');
+      const coordSelect = el.querySelector('[name="coordinatorEmail"]');
+      const sitesErr   = el.querySelector('.sites-field-error');
+      const coordErr   = el.querySelector('.coord-field-error');
+
+      const nums = parseSiteNumbers(sitesInput?.value || '');
+      if (nums.length === 0) {
+        sitesInput?.classList.add('is-invalid');
+        if (sitesErr) { sitesErr.textContent = 'Enter at least one site number.'; sitesErr.classList.remove('hidden'); }
+        hasGroupError = true;
+      } else {
+        sitesInput?.classList.remove('is-invalid');
+        if (sitesErr) sitesErr.classList.add('hidden');
+      }
+
+      if (!coordSelect?.value) {
+        coordSelect?.classList.add('is-invalid');
+        if (coordErr) { coordErr.textContent = 'Coordinator is required.'; coordErr.classList.remove('hidden'); }
+        hasGroupError = true;
+      } else {
+        coordSelect?.classList.remove('is-invalid');
+        if (coordErr) coordErr.classList.add('hidden');
+      }
+    });
+
+    if (hasGroupError) {
+      showError('Please fix the errors above.');
+      return;
+    }
 
     const payload = collectFormData();
     const errors  = validateTripForm({ ...payload.trip, sites: payload.sites });

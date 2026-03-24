@@ -81,3 +81,31 @@ function sumTripCosts(costs) {
        + (Number(costs.truckCost) || 0)
        + (Number(costs.hotelCost) || 0);
 }
+
+/**
+ * Parse a raw site numbers string into an array of trimmed, non-empty strings.
+ * Accepts "/" or "-" as separators.
+ *
+ * @param {string} rawInput - e.g. "1234/5678/8907" or "1234-5678-8907"
+ * @returns {string[]}
+ */
+function parseSiteNumbers(rawInput) {
+  return String(rawInput || '').split(/[\/\-]/).map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 0; });
+}
+
+/**
+ * Calculate cost per site given a total cost and an array of group objects.
+ * Each group has a `sites` property (raw string of site numbers).
+ *
+ * @param {number} totalCost
+ * @param {{ sites: string }[]} allGroups
+ * @returns {number}
+ */
+function calculateCostPerSite(totalCost, allGroups) {
+  var totalSites = 0;
+  allGroups.forEach(function (group) {
+    totalSites += parseSiteNumbers(group.sites).length;
+  });
+  if (totalSites === 0) return 0;
+  return totalCost / totalSites;
+}
