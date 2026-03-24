@@ -6,9 +6,9 @@
  */
 
 /**
- * Get all sites for a given trip.
+ * Get sites for a given trip, optionally filtered by coordinator email.
  *
- * @param {{ tripId: string }} data
+ * @param {{ tripId: string, email?: string }} data
  * @returns {{ success: boolean, data: Object[] }}
  */
 function getSitesByTrip(data) {
@@ -17,6 +17,15 @@ function getSitesByTrip(data) {
 
   var sites = sheetToObjects(getSheet(TABS.SITES));
   var result = sites.filter(function (s) { return s.tripId === tripId; });
+
+  // Optional: filter to a specific coordinator's sites
+  if (data.email) {
+    var emailLower = String(data.email).toLowerCase().trim();
+    result = result.filter(function (s) {
+      return String(s.coordinatorEmail || '').toLowerCase().trim() === emailLower;
+    });
+  }
+
   return { success: true, data: result };
 }
 

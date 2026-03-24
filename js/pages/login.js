@@ -9,8 +9,8 @@
   const existingUser = getCurrentUser();
   if (existingUser) {
     window.location.href = existingUser.role === ROLES.FLEET
-      ? ROUTES.FLEET_DASHBOARD
-      : ROUTES.PROJECT_DASHBOARD;
+      ? 'pages/fleet/dashboard.html'
+      : 'pages/project/dashboard.html';
     return;
   }
 
@@ -44,8 +44,8 @@
       if (result.success && result.data) {
         const user = result.data;
         const dest = user.role === ROLES.FLEET
-          ? ROUTES.FLEET_DASHBOARD
-          : ROUTES.PROJECT_DASHBOARD;
+          ? 'pages/fleet/dashboard.html'
+          : 'pages/project/dashboard.html';
         window.location.href = dest;
       } else {
         throw new Error(result.error || 'Invalid email or password.');

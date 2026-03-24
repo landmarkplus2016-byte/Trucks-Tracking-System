@@ -64,13 +64,14 @@
     for (const trip of trips) {
       let sites = [];
       try {
-        const sitesResult = await fetchAPI(ACTIONS.GET_SITES_BY_TRIP, { tripId: trip.tripId });
+        // Pass email so server filters to only this coordinator's sites
+        const sitesResult = await fetchAPI(ACTIONS.GET_SITES_BY_TRIP, { tripId: trip.tripId, email: user.email });
         if (sitesResult.success) {
           const allSites = sitesResult.data || [];
-          // Only show this coordinator's sites (case-insensitive email match)
-          const myEmail = user.email.toLowerCase();
+          // Client-side safety filter: correct email + pending status
+          const myEmail = String(user.email || '').toLowerCase().trim();
           sites = allSites.filter(s =>
-            String(s.coordinatorEmail || '').toLowerCase() === myEmail &&
+            String(s.coordinatorEmail || '').toLowerCase().trim() === myEmail &&
             s.jcStatus === JC_STATUS.PENDING
           );
         }

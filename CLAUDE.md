@@ -8,7 +8,7 @@ Developer notes for Claude. Read this before making any changes.
 
 - **Frontend:** Plain HTML5 + CSS3 + Vanilla JS (ES6+) — no build tools, no npm, no frameworks
 - **Backend:** Google Apps Script deployed as a Web App
-- **Database:** Google Sheets (one file, four tabs)
+- **Database:** Google Sheets (one file, five tabs)
 - **Hosting:** GitHub Pages — must work by opening `index.html` directly, no server required
 
 ---
@@ -116,6 +116,14 @@ Defined in `Code.gs`. No other `.gs` file should call `SpreadsheetApp` directly 
 | `Sites` | siteId, tripId, siteNumber, coordinatorEmail, jobCode, costShare, jcStatus |
 | `Users` | userId, name, email, role, password |
 | `Notifications` | notifId, toEmail, tripId, message, isRead, createdAt |
+| `Lists` | listName, value, label, sortOrder |
+
+`Lists` powers dynamic dropdowns. Example rows for WH Representatives:
+
+| listName | value | label | sortOrder |
+|---|---|---|---|
+| whRep | Ehab | Ehab | 1 |
+| whRep | Karam | Karam | 2 |
 
 ---
 
@@ -123,7 +131,7 @@ Defined in `Code.gs`. No other `.gs` file should call `SpreadsheetApp` directly 
 
 Stored in `js/config/config.js`:
 ```
-https://script.google.com/macros/s/AKfycbzB-m5et53xdYwOjKQ71w87tSbAOnZJ09xL01hKMYmuKqWaB-csaBBByaSPijjgeeTS9Q/exec
+https://script.google.com/macros/s/AKfycbwehWt6IZc7bhUW4NqYEzshfY7JEmOEZEB1WSRpwb75yrwqv-Oak5Klnx7XlF8q3Nkl/exec
 ```
 
 ---
@@ -152,3 +160,64 @@ https://script.google.com/macros/s/AKfycbzB-m5et53xdYwOjKQ71w87tSbAOnZJ09xL01hKM
 - Added `getSpreadsheet()` that reads the sheet ID from Script Properties (`SHEET_ID`)
 - Updated `getSheet()` to call `getSpreadsheet()` — all other `.gs` files already used `getSheet()` so no other files needed changes
 - **Required setup step:** add `SHEET_ID` script property in Apps Script → Project Settings → Script Properties
+
+---
+
+## Changes Made — 2026-03-23
+
+### Fix: CORS — switched API calls to GET
+- Google Apps Script POST requests cause a CORS redirect that loses the POST body
+- Changed `fetchAPI` in `api.service.js` to use GET with URL query params: `?action=X&data=JSON`
+- Updated `doGet` in `Code.gs` to route all actions (same switch as `doPost`)
+- No other files needed changes — all callers go through `fetchAPI`
+
+### Fix: Role normalization
+- Users sheet role values like `"Fleet Coordinator"`, `"Project Coord"`, `"FC"` were not matching exact constants
+- `apps-script/auth.gs` `validateUser` and `getUserRole`: map all variants to `'fleet'` or `'project'`
+- `js/services/auth.service.js` `login()`: normalizes `result.data.role` to `.toLowerCase().trim()` before saving session
+- `requireRole()`: compares roles case-insensitively
+
+### Fix: Loading timeout pattern — all page scripts
+- Pages could hang forever if `requireRole()` threw before the timeout was set
+- Pattern applied to all 6 page scripts (both fleet and project):
+  1. Set `loadingTimeout = setTimeout(showError, 10000)` as first line
+  2. Call `requireRole` inside `try/catch` AFTER the timeout — catch clears timeout and redirects to login
+  3. `clearTimeout(loadingTimeout)` is the first statement after each `await fetchAPI(...)` resolves
+- `hideLoading()` uses `loadingEl?.remove()` to pull the spinner out of the DOM entirely
+
+### Feature: Dynamic dropdowns — Lists sheet + coordinators
+- Added `Lists` tab to the spreadsheet: `listName | value | label | sortOrder`
+- `apps-script/lists.gs` (new file):
+  - `getList(data)`: returns items for a named list, sorted by `sortOrder`
+  - `getCoordinators()`: returns project-role users as `{ value: email, label: name }`
+- `js/services/trips.service.js`: added `getListValues(listName)` and updated `getCoordinators()`
+- `ACTIONS.GET_LIST` and `ACTIONS.GET_COORDINATORS` added to `js/constants/index.js`
+- New/edit trip forms: WH Rep `<select id="whRep">` populated from Lists sheet; coordinator `<select class="coordinator-select">` per site loaded async via `loadCoordinatorOptions(selectEl)`
+
+### Fix: New trip and edit trip form IDs
+- Cost input IDs changed from hyphenated (`labor-cost`) to camelCase (`laborCost`, `parkCost`, `truckCost`, `hotelCost`) to match JS property names
+- WH Rep select changed from `id="wh-rep"` to `id="whRep"`
+- Coordinator fields changed from free-text `<input>` to `<select class="coordinator-select">`
+- Fallback WH rep list (`Ehab`, `Karam`) used if API call fails or times out
+
+---
+
+## Changes Made — 2026-03-24
+
+### Fix: Login redirect stuck at index.html
+- `login.js` was using `ROUTES.FLEET_DASHBOARD` / `ROUTES.PROJECT_DASHBOARD` for post-login redirects
+- These are root-relative paths that should resolve correctly, but combined with `requireRole`'s sibling-relative `dashboard.html` redirect on wrong role, could cause a loop back to `index.html`
+- Fixed by hardcoding literal paths in `login.js`: `'pages/fleet/dashboard.html'` and `'pages/project/dashboard.html'`
+- This applies to BOTH the "already logged in" early redirect at the top AND the post-login redirect
+- **Rule**: `login.js` is the only file that uses these literal paths. All other files use `ROUTES.*` or sibling-relative `dashboard.html`
+
+### Fix: Pending JC page shows empty — coordinator email matching
+- `pending-jc.js` was filtering sites client-side with `s.coordinatorEmail === user.email` (strict equality)
+- Fixed by normalizing both sides: `String(s.coordinatorEmail || '').toLowerCase().trim() === String(user.email || '').toLowerCase().trim()`
+- Also moved filtering server-side: `getSitesByTrip` in `sites.gs` now accepts an optional `email` parameter and filters by `coordinatorEmail` (case-insensitive) when provided
+- `pending-jc.js` now passes `email: user.email` in the `GET_SITES_BY_TRIP` call; client-side filter kept as safety fallback
+
+### Fix: requireRole error handling in project pages
+- All three project page scripts (`dashboard.js`, `pending-jc.js`, `history.js`): `requireRole` catch changed from `showError(...)` to `window.location.href = '../../index.html'; return;`
+- Previously the catch was displaying a misleading "Could not reach the server" error while also navigating away
+- Now: any auth/role failure cleanly redirects to login without showing an error on the wrong page
