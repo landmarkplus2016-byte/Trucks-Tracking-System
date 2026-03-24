@@ -58,6 +58,8 @@ function updateJobCode(data) {
       var tripId    = values[i][headers.indexOf('tripId')];
       checkAndUpdateTripStatus(tripId);
 
+      try { rebuildCostPerSiteReport(); } catch(e) { Logger.log('Report error: ' + e.message); }
+
       return { success: true };
     }
   }

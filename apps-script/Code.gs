@@ -13,6 +13,7 @@ var TABS = {
   USERS:         'Users',
   NOTIFICATIONS: 'Notifications',
   LISTS:         'Lists',
+  COST_PER_SITE: 'Cost per Site',
 };
 
 /**

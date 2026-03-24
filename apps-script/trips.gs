@@ -122,6 +122,8 @@ function createTrip(data) {
     sendEmailNotification({ toEmail: email, tripId: tripId, message: msg });
   });
 
+  try { rebuildCostPerSiteReport(); } catch(e) { Logger.log('Report error: ' + e.message); }
+
   return { success: true, data: { tripId: tripId } };
 }
 
@@ -197,6 +199,8 @@ function updateTrip(data) {
     });
   }
 
+  try { rebuildCostPerSiteReport(); } catch(e) { Logger.log('Report error: ' + e.message); }
+
   return { success: true };
 }
 
@@ -225,6 +229,8 @@ function deleteTrip(data) {
   for (var j = sValues.length; j >= 2; j--) {
     if (sValues[j - 1][sTripCol] === tripId) { sitesSheet.deleteRow(j); }
   }
+
+  try { rebuildCostPerSiteReport(); } catch(e) { Logger.log('Report error: ' + e.message); }
 
   return { success: true };
 }
