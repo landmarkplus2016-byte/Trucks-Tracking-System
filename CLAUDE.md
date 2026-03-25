@@ -264,3 +264,134 @@ https://script.google.com/macros/s/AKfycbwehWt6IZc7bhUW4NqYEzshfY7JEmOEZEB1WSRpw
 ### Fix: `getSpreadsheet()` hardcoded sheet ID
 - Replaced `PropertiesService.getScriptProperties().getProperty('SHEET_ID')` with hardcoded ID `167LeUQQLTf9BHNbWExgWIabU24AvJTEUZSoXEDwX41M`
 - No Script Property setup required
+
+---
+
+## Changes Made — 2026-03-25
+
+### Full rewrite: `new-trip.js` — async, group-based, API-driven dropdowns
+
+**Problem:** The old `new-trip.js` was a synchronous IIFE that used plain text inputs for coordinator email and a hardcoded `id="wh-rep"` select for WH Rep. It tracked individual sites (one site number per row) and computed cost preview using group count, not actual parsed site count.
+
+**What changed:**
+- Converted to `async function` so WH rep and coordinator lists can be awaited on load
+- Form submit button is disabled until the WH rep API call resolves (or times out after 10 s, falling back to `['Ehab', 'Karam']`)
+- `requireRole()` is called inside `try/catch` after the timeout is set; a caught auth error redirects to login instead of crashing
+- `addGroupEntry()` replaced `addSiteEntry()`: each group has a free-text sites field (`name="groupSites"`) and a `<select class="coordinator-select">` loaded async via `loadCoordinatorOptions()`
+- On submit: `parseSiteNumbers(rawSites)` expands each group into individual `{ siteNumber, coordinatorEmail }` objects before the payload is sent
+- Per-group validation on submit: sites field must produce ≥1 parsed number; coordinator select must have a value; inline error spans (`.sites-field-error`, `.coord-field-error`) shown per group
+- Cost preview counts `parseSiteNumbers()` results across all groups, not just group count; shows `—` when no sites are entered yet
+- WH rep populated by `fetchAPI(ACTIONS.GET_LIST, { listName: 'whRep' })`; falls back to hardcoded array if the call fails
+
+**Key IDs (HTML must match):**
+- `id="whRep"` — WH rep select
+- `id="laborCost"`, `id="parkCost"`, `id="truckCost"`, `id="hotelCost"` — cost inputs (camelCase, not hyphenated)
+- `id="sites-container"` — container for group divs
+- `id="add-site-btn"` — "Add Another Coordinator" button
+
+---
+
+### Full rewrite: `edit-trip.js` — async, group-based, re-grouping, data-originals
+
+**Problem:** The old `edit-trip.js` called `getTrips()` and `getSitesByTrip()` via service wrappers, used hyphenated form IDs (`labor-cost`, `wh-rep`), showed individual site rows with free-text coordinator email inputs, and had the loading timeout set after `requireRole()` (so if `requireRole` threw, the timeout was never set).
+
+**What changed:**
+
+*Loading and auth:*
+- `loadingTimeout = setTimeout(showPageError, 10000)` is set as the very first statement before `requireRole()`
+- `requireRole()` is called inside `try/catch`; caught errors call `showPageError(...)` and return immediately
+- `hideLoading()` calls `loadingEl?.remove()` (removes from DOM, not just hides)
+- All three data fetches (`GET_TRIPS`, `GET_SITES_BY_TRIP`, `GET_LIST whRep`) run in a single `Promise.all()` and `clearTimeout(loadingTimeout)` runs immediately after
+
+*WH rep dropdown:*
+- Populated from `GET_LIST whRep` API result; falls back to `FALLBACK_WH_REPS` if the call fails or returns empty
+- Handles the case where `trip.whRep` does not match any list value by appending a one-off `<option selected>` for it
+- References `id="whRep"` (camelCase); old `id="wh-rep"` is gone
+
+*Site groups and re-grouping:*
+- Existing sites (from `GET_SITES_BY_TRIP`) are re-grouped by `coordinatorEmail.toLowerCase().trim()` into a `groupMap`
+- Each group's `rawSites` is built by joining `siteNumber` values with `/`
+- The original site objects are stored on the group div as `div.dataset.originals = JSON.stringify(originals)` — this preserves `siteId`, `jobCode`, and `jcStatus` across edits
+- `addGroupEntry(group)` builds the UI: a sites text input pre-filled with `rawSites`, and a coordinator `<select>` populated async (pre-selects `group.coordinatorEmail`)
+
+*Collecting form data on submit:*
+- `parseSiteNumbers(rawSites)` expands each group back to individual site objects
+- For each parsed site number, the corresponding entry from `originals` (matched by `siteNumber`) is found to preserve `siteId`/`jobCode`/`jcStatus`; unmatched numbers get a fresh record (no `siteId` → server generates one)
+- Per-group validation mirrors `new-trip.js`: sites field and coordinator select both validated inline before submit
+
+*Form ID fixes:*
+- `id="laborCost"`, `id="parkCost"`, `id="truckCost"`, `id="hotelCost"` (was `labor-cost` etc.)
+- `id="whRep"` (was `wh-rep`)
+
+---
+
+### Fix: `pending-jc.js` — loading timeout before `requireRole`, direct `fetchAPI`, server-side filter
+
+**Problem:** `pending-jc.js` called `requireRole()` synchronously before setting a loading timeout, so any auth error would crash before the timeout was armed. It also used service-wrapper calls (`getTrips()`, `getSitesByTrip()`) and filtered coordinator email client-side with strict equality.
+
+**What changed:**
+- Loading timeout (`setTimeout(showError, 10000)`) set before `requireRole()`
+- `requireRole()` in `try/catch`; catch does `window.location.href = '../../index.html'; return;` (no error shown on wrong page)
+- Trips fetched with `fetchAPI(ACTIONS.GET_TRIPS, { email, role, jcStatus })` directly
+- Sites fetched with `fetchAPI(ACTIONS.GET_SITES_BY_TRIP, { tripId, email: user.email })` — server now filters by email (see `sites.gs` below)
+- Client-side safety filter kept: normalises both emails with `.toLowerCase().trim()` before comparing
+- `hideLoading()` removes the loading element from the DOM
+
+---
+
+### Fix: `apps-script/sites.gs` — server-side coordinator email filter
+
+`getSitesByTrip(data)` now accepts an optional `email` field:
+```js
+if (data.email) {
+  var emailLower = String(data.email).toLowerCase().trim();
+  result = result.filter(function (s) {
+    return String(s.coordinatorEmail || '').toLowerCase().trim() === emailLower;
+  });
+}
+```
+This reduces the payload sent to the client and prevents coordinator A from ever seeing coordinator B's sites even if client-side filtering had a bug.
+
+`updateJobCode` now triggers `rebuildCostPerSiteReport()` (wrapped in `try/catch`) after a successful job-code update.
+
+---
+
+### Feature: `apps-script/reports.gs` — `rebuildCostPerSiteReport()`
+
+New file. Called (wrapped in `try/catch`) from `createTrip`, `updateTrip`, `deleteTrip` in `trips.gs` and from `updateJobCode` in `sites.gs`.
+
+Behaviour:
+- Clears the "Cost per Site" sheet, writes a header row, then writes one data row per site across all trips
+- Columns: Date, Coordinator, Site, Job Code, Route, Driver, Total Cost, Status
+- Coordinator display name is resolved from the `Lists` sheet (`listName = 'coordinator'`, `value = coordinatorEmail`)
+- Rows sorted newest-first by date
+- Any error during rebuild is logged and swallowed so it never breaks a write operation
+
+`COST_PER_SITE: 'Cost per Site'` added to `TABS` in `Code.gs`.
+
+---
+
+### Fix: `apps-script/Code.gs` — `LISTS` tab added, routing for `getList`/`getCoordinators`
+
+- `TABS.LISTS = 'Lists'` and `TABS.COST_PER_SITE = 'Cost per Site'` added to the `TABS` object
+- `doGet` and `doPost` switch statements both now route `'getList'` → `getList(data)` and `'getCoordinators'` → `getCoordinators(data)`
+- `getSpreadsheet()` hardcoded to open sheet ID `167LeUQQLTf9BHNbWExgWIabU24AvJTEUZSoXEDwX41M` directly (no Script Properties lookup)
+
+---
+
+### Fix: `apps-script/trips.gs` — Sites `appendRow` 7-column order, report triggers
+
+Both `createTrip` and `updateTrip` write sites with exactly 7 columns:
+```
+siteId | tripId | siteNumber | coordinatorEmail | jobCode | costShare | jcStatus
+```
+(The `coordinatorName` column that was temporarily added is gone.)
+
+`rebuildCostPerSiteReport()` called (in `try/catch`) at the end of `createTrip`, `updateTrip`, and `deleteTrip`.
+
+---
+
+### Known issues after 2026-03-25 session
+- `rebuildCostPerSiteReport()` builds coordinator name from `Lists` tab using `listName = 'coordinator'` — confirm this list exists in the sheet with `value = coordinatorEmail` rows before testing the Cost per Site tab in production
+- End-to-end test of Edit Trip flow needed: verify that `data-originals` round-trip correctly preserves `jobCode` and `jcStatus` for sites that already have them
+- New Trip flow: verify that coordinator dropdown loads and that a submitted trip's sites land in the Sites sheet with correct 7-column order
